@@ -1,6 +1,7 @@
 <?php
-define('ROOT', dirname(__DIR__));
-require_once ROOT . '/includes/auth.php';
-session_destroy();
-header('Location: ' . BASE_URL . '/student/login.php');
-exit;
+
+declare(strict_types=1);
+
+require_once dirname(__DIR__) . '/app/bootstrap.php';
+
+(new App\Controllers\Student\AuthController())->logout();
