@@ -1,38 +1,35 @@
 /**
- * exam.js – Exam countdown timer & question navigation
+ * exam.js - Exam countdown timer and question navigation.
  *
- * Depends on:  window.EXAM_CONFIG  (set inline in take_exam.php)
- *   {
- *     duration: <minutes>,
- *     totalQuestions: <int>,
- *     submitUrl: 'submit_exam.php'
- *   }
+ * Reads its configuration from the DOM:
+ *   #timer-display[data-duration]  exam length in minutes
+ *   .question-slide[data-index]    one per question
+ *   .q-nav-btn[data-index]         question navigator buttons
+ *
+ * The answers a student picks are carried by the radio inputs themselves,
+ * which the form posts normally. Grading happens server-side against the
+ * answer key in the database; nothing here influences the score.
  */
-
 (function () {
   'use strict';
 
-  /* ── State ──────────────────────────────────────────── */
-  let currentQuestion = 0;
-  const answers       = {};   // { questionIndex: optionValue }
-  let timerInterval   = null;
-  let secondsLeft     = 0;
+  var currentQuestion = 0;
+  var timerInterval = null;
+  var secondsLeft = 0;
 
-  /* ── DOM refs (populated after DOMContentLoaded) ──── */
-  let timerDisplay, timerWidget, timerLabel;
-  let questionCards, navBtns;
-  let prevBtn, nextBtn, submitBtn;
+  var timerDisplay, timerWidget, timerLabel;
+  var questionSlides, navButtons;
+  var prevBtn, nextBtn, submitBtn;
+  var progressFill, progressLabel;
 
-  /* ─────────────────────────────────────────────────── */
+  /* Timer */
 
-  /** Format seconds → MM:SS */
-  function formatTime(s) {
-    const m = Math.floor(s / 60);
-    const sec = s % 60;
-    return String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+  function formatTime(totalSeconds) {
+    var minutes = Math.floor(totalSeconds / 60);
+    var seconds = totalSeconds % 60;
+    return String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
   }
 
-  /** Update the timer widget colour based on time remaining */
   function updateTimerStyle() {
     timerWidget.classList.remove('warning', 'danger');
     if (secondsLeft <= 60) {
@@ -42,10 +39,9 @@
     }
   }
 
-  /** Tick – called every second */
   function tick() {
-    secondsLeft--;
-    timerDisplay.textContent = formatTime(secondsLeft);
+    secondsLeft -= 1;
+    timerDisplay.textContent = formatTime(Math.max(0, secondsLeft));
     updateTimerStyle();
 
     if (secondsLeft <= 0) {
@@ -55,172 +51,179 @@
     }
   }
 
-  /** Start the countdown timer */
   function startTimer(durationMinutes) {
     secondsLeft = durationMinutes * 60;
     timerDisplay.textContent = formatTime(secondsLeft);
     timerInterval = setInterval(tick, 1000);
   }
 
-  /* ── Question Navigation ────────────────────────────── */
+  /* Answer tracking */
 
-  /** Show question at index i */
-  function showQuestion(i) {
-    // Hide all, show target
-    questionCards.forEach(card => card.classList.remove('active'));
-    questionCards[i].classList.add('active');
+  function answeredIndexes() {
+    var answered = [];
+    questionSlides.forEach(function (slide, index) {
+      if (slide.querySelector('input[type="radio"]:checked')) {
+        answered.push(index);
+      }
+    });
+    return answered;
+  }
 
-    // Update nav buttons
-    navBtns.forEach((btn, idx) => {
-      btn.classList.remove('current');
-      if (idx === i) btn.classList.add('current');
+  function updateProgress() {
+    var answered = answeredIndexes();
+
+    answered.forEach(function (index) {
+      if (navButtons[index]) {
+        navButtons[index].classList.add('answered');
+      }
     });
 
-    currentQuestion = i;
-
-    // Prev / Next visibility
-    prevBtn.disabled = i === 0;
-    nextBtn.disabled = i === questionCards.length - 1;
-
-    // Show submit only on last question
-    submitBtn.style.display = (i === questionCards.length - 1) ? 'inline-flex' : 'none';
-    nextBtn.style.display    = (i === questionCards.length - 1) ? 'none' : 'inline-flex';
+    if (progressFill) {
+      progressFill.style.width =
+        Math.round((answered.length / questionSlides.length) * 100) + '%';
+    }
+    if (progressLabel) {
+      progressLabel.textContent = answered.length + ' / ' + questionSlides.length + ' answered';
+    }
   }
 
-  /** Mark a nav button as answered */
-  function markAnswered(i) {
-    navBtns[i].classList.add('answered');
-  }
+  /* Navigation */
 
-  /* ── Option Selection ───────────────────────────────── */
+  function showQuestion(index) {
+    if (index < 0 || index >= questionSlides.length) {
+      return;
+    }
+
+    questionSlides.forEach(function (slide) {
+      slide.classList.remove('active');
+    });
+    questionSlides[index].classList.add('active');
+
+    navButtons.forEach(function (button, i) {
+      button.classList.toggle('current', i === index);
+      button.setAttribute('aria-current', i === index ? 'true' : 'false');
+    });
+
+    currentQuestion = index;
+
+    var isLast = index === questionSlides.length - 1;
+    prevBtn.disabled = index === 0;
+    nextBtn.hidden = isLast;
+    submitBtn.hidden = !isLast;
+  }
 
   function bindOptions() {
-    document.querySelectorAll('.option-item').forEach(item => {
+    document.querySelectorAll('.option-item').forEach(function (item) {
       item.addEventListener('click', function () {
-        const radio  = this.querySelector('input[type="radio"]');
-        const qIndex = parseInt(this.closest('.question-slide').dataset.index, 10);
+        var radio = this.querySelector('input[type="radio"]');
+        if (!radio) {
+          return;
+        }
 
-        // Deselect siblings
-        this.closest('.options-list').querySelectorAll('.option-item')
-            .forEach(el => el.classList.remove('selected'));
+        this.closest('.options-list')
+          .querySelectorAll('.option-item')
+          .forEach(function (sibling) {
+            sibling.classList.remove('selected');
+          });
 
-        // Select this
         this.classList.add('selected');
         radio.checked = true;
-
-        // Record answer
-        answers[qIndex] = radio.value;
-
-        // Mark nav btn
-        markAnswered(qIndex);
+        updateProgress();
       });
     });
   }
 
-  /* ── Submit ─────────────────────────────────────────── */
+  /* Submission */
 
-  /** Collect all radio-checked answers and post the form */
   function doSubmit() {
     clearInterval(timerInterval);
+    window.removeEventListener('beforeunload', warnBeforeUnload);
 
-    // Write answers into hidden inputs then submit the real form
-    const form = document.getElementById('exam-form');
-    Object.entries(answers).forEach(([qIdx, val]) => {
-      // find existing hidden input or create one
-      let hidden = form.querySelector(`input[name="answers[${qIdx}]"]`);
-      if (!hidden) {
-        hidden = document.createElement('input');
-        hidden.type  = 'hidden';
-        hidden.name  = `answers[${qIdx}]`;
-        form.appendChild(hidden);
-      }
-      hidden.value = val;
-    });
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting...';
 
-    form.submit();
+    document.getElementById('exam-form').submit();
   }
 
   function autoSubmit() {
-    // Show toast
-    const toast = document.createElement('div');
-    toast.className = 'alert alert-warning';
-    toast.style.cssText = 'position:fixed;top:76px;left:50%;transform:translateX(-50%);z-index:9999;min-width:320px;box-shadow:0 4px 20px rgba(0,0,0,.2)';
-    toast.innerHTML = '⏰ <strong>Time is up!</strong> Your exam is being submitted…';
+    var toast = document.createElement('div');
+    toast.className = 'alert alert-warning exam-toast';
+    toast.setAttribute('role', 'alert');
+    toast.innerHTML = '&#9200; <strong>Time is up!</strong> Your exam is being submitted...';
     document.body.appendChild(toast);
     setTimeout(doSubmit, 1800);
   }
 
-  /** Confirm before manual submit */
   function confirmSubmit() {
-    const unanswered = questionCards.length - Object.keys(answers).length;
-    let msg = 'Are you sure you want to submit the exam?';
+    var unanswered = questionSlides.length - answeredIndexes().length;
+    var message = 'Are you sure you want to submit the exam?';
+
     if (unanswered > 0) {
-      msg = `You have ${unanswered} unanswered question(s). Submit anyway?`;
+      message = 'You have ' + unanswered + ' unanswered question(s). Submit anyway?';
     }
-    if (window.confirm(msg)) doSubmit();
+
+    if (window.confirm(message)) {
+      doSubmit();
+    }
   }
 
-  /* ── Progress Bar ───────────────────────────────────── */
-  function updateProgress() {
-    const fill = document.getElementById('exam-progress-fill');
-    if (!fill) return;
-    const pct = Math.round((Object.keys(answers).length / questionCards.length) * 100);
-    fill.style.width = pct + '%';
-    const label = document.getElementById('exam-progress-label');
-    if (label) label.textContent = Object.keys(answers).length + ' / ' + questionCards.length + ' answered';
+  function warnBeforeUnload(event) {
+    if (answeredIndexes().length < questionSlides.length) {
+      event.preventDefault();
+      event.returnValue = '';
+    }
   }
 
-  // Patch answers to also update progress
-  const _markAnswered = markAnswered;
-  markAnswered = function (i) {
-    _markAnswered(i);
-    updateProgress();
-  };
-
-  /* ── Init ───────────────────────────────────────────── */
+  /* Init */
 
   document.addEventListener('DOMContentLoaded', function () {
     timerDisplay = document.getElementById('timer-display');
-    timerWidget  = document.getElementById('timer-widget');
-    timerLabel   = document.getElementById('timer-label');
-    questionCards = Array.from(document.querySelectorAll('.question-slide'));
-    navBtns      = Array.from(document.querySelectorAll('.q-nav-btn'));
-    prevBtn      = document.getElementById('btn-prev');
-    nextBtn      = document.getElementById('btn-next');
-    submitBtn    = document.getElementById('btn-submit');
+    timerWidget = document.getElementById('timer-widget');
+    timerLabel = document.getElementById('timer-label');
+    prevBtn = document.getElementById('btn-prev');
+    nextBtn = document.getElementById('btn-next');
+    submitBtn = document.getElementById('btn-submit');
+    progressFill = document.getElementById('exam-progress-fill');
+    progressLabel = document.getElementById('exam-progress-label');
 
-    if (!timerDisplay || questionCards.length === 0) return;
+    questionSlides = Array.prototype.slice.call(document.querySelectorAll('.question-slide'));
+    navButtons = Array.prototype.slice.call(document.querySelectorAll('.q-nav-btn'));
 
-    // Keyboard navigation
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'ArrowRight' && currentQuestion < questionCards.length - 1) showQuestion(currentQuestion + 1);
-      if (e.key === 'ArrowLeft'  && currentQuestion > 0) showQuestion(currentQuestion - 1);
+    if (!timerDisplay || questionSlides.length === 0 || !prevBtn || !nextBtn || !submitBtn) {
+      return;
+    }
+
+    prevBtn.addEventListener('click', function () {
+      showQuestion(currentQuestion - 1);
     });
-
-    prevBtn.addEventListener('click', () => showQuestion(currentQuestion - 1));
-    nextBtn.addEventListener('click', () => showQuestion(currentQuestion + 1));
+    nextBtn.addEventListener('click', function () {
+      showQuestion(currentQuestion + 1);
+    });
     submitBtn.addEventListener('click', confirmSubmit);
 
-    navBtns.forEach((btn, i) => {
-      btn.addEventListener('click', () => showQuestion(i));
+    navButtons.forEach(function (button, index) {
+      button.addEventListener('click', function () {
+        showQuestion(index);
+      });
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (event.target.matches('input, textarea, select')) {
+        return;
+      }
+      if (event.key === 'ArrowRight') {
+        showQuestion(currentQuestion + 1);
+      }
+      if (event.key === 'ArrowLeft') {
+        showQuestion(currentQuestion - 1);
+      }
     });
 
     bindOptions();
-
-    // Start from Q1
     showQuestion(0);
+    updateProgress();
+    startTimer(parseInt(timerDisplay.dataset.duration, 10) || 30);
 
-    // Start timer
-    const duration = parseInt(timerDisplay.dataset.duration, 10) || 30;
-    startTimer(duration);
-
-    // Warn before leaving page
-    window.addEventListener('beforeunload', function (e) {
-      if (Object.keys(answers).length < questionCards.length) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    });
+    window.addEventListener('beforeunload', warnBeforeUnload);
   });
-
 })();
