@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Controllers\Admin;
 
+use App\Core\Paginator;
 use App\Core\Request;
 use App\Core\Response;
+use App\Core\Sorter;
 use App\Core\View;
 use App\Middleware\Auth;
 use App\Repositories\ExamRepository;
@@ -39,14 +41,28 @@ final class ResultController
         $studentId = Request::id('student_id');
         $examId    = Request::id('exam_id');
 
+        $search = Request::query('q');
+        $sort   = Sorter::fromRequest(ResultRepository::sortableColumns(), 'date_taken', 'desc');
+        $pages  = Paginator::fromRequest($this->results->countFiltered($studentId, $examId, $search));
+
         View::render('admin/results', [
-            'pageTitle' => 'View Results',
+            'pageTitle' => 'Results',
             'role'      => 'admin',
-            'results'   => $this->results->filtered($studentId, $examId),
+            'results'   => $this->results->paginateFiltered(
+                $studentId,
+                $examId,
+                $search,
+                $sort->orderBy(),
+                $pages->perPage,
+                $pages->offset()
+            ),
             'students'  => $this->students->nameOptions(),
             'exams'     => $this->exams->titleOptions(),
             'studentId' => $studentId,
             'examId'    => $examId,
+            'search'    => $search,
+            'sort'      => $sort,
+            'paginator' => $pages,
         ], 'layouts/admin');
     }
 }

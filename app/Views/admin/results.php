@@ -1,96 +1,144 @@
 <?php
 /**
- * All exam results, filterable by student and exam.
+ * All exam results, filterable by student and exam and searchable by name.
  *
- * @var list<array<string,mixed>> $results
- * @var list<array<string,mixed>> $students
- * @var list<array<string,mixed>> $exams
+ * @var list<array<string,mixed>> $results   one page of rows
+ * @var list<array<string,mixed>> $students  filter options
+ * @var list<array<string,mixed>> $exams     filter options
  * @var int                       $studentId
  * @var int                       $examId
+ * @var string                    $search
+ * @var \App\Core\Sorter          $sort
+ * @var \App\Core\Paginator       $paginator
  */
-$filtered = $studentId > 0 || $examId > 0;
+$path     = '/admin/results.php';
+$filtered = $studentId > 0 || $examId > 0 || $search !== '';
+
+$sortHeader = static function (string $key, string $label) use ($sort, $path): void {
+    \App\Core\View::partial('partials/sort_header', [
+        'sort' => $sort, 'key' => $key, 'label' => $label, 'path' => $path,
+    ]);
+};
 ?>
-<div class="page-heading">
-  <h2>Exam Results</h2>
-  <p class="text-muted">Total records: <strong><?= count($results) ?></strong></p>
-</div>
-
-<div class="card mb-2">
-  <div class="card-body card-body-sm">
-    <form method="GET" class="filter-form">
-      <div class="form-group filter-field">
-        <label for="student_id">Filter by Student</label>
-        <select id="student_id" name="student_id" class="form-control">
-          <option value="">All Students</option>
-          <?php foreach ($students as $student): ?>
-            <option value="<?= (int) $student['student_id'] ?>"
-              <?= $studentId === (int) $student['student_id'] ? 'selected' : '' ?>>
-              <?= e($student['name']) ?>
-            </option>
-          <?php endforeach; ?>
-        </select>
-      </div>
-
-      <div class="form-group filter-field">
-        <label for="exam_id">Filter by Exam</label>
-        <select id="exam_id" name="exam_id" class="form-control">
-          <option value="">All Exams</option>
-          <?php foreach ($exams as $exam): ?>
-            <option value="<?= (int) $exam['exam_id'] ?>"
-              <?= $examId === (int) $exam['exam_id'] ? 'selected' : '' ?>>
-              <?= e($exam['title']) ?>
-            </option>
-          <?php endforeach; ?>
-        </select>
-      </div>
-
-      <div class="button-row button-row-tight">
-        <button type="submit" class="btn btn-primary btn-sm">&#128269; Filter</button>
-        <a href="<?= e(url('/admin/results.php')) ?>" class="btn btn-outline btn-sm">&times; Clear</a>
-      </div>
-    </form>
+<div class="page-head">
+  <div class="page-head-text">
+    <h1 class="page-title">Results</h1>
+    <p class="page-subtitle">Every completed attempt across every exam.</p>
   </div>
 </div>
 
-<?php if ($results === []): ?>
-  <div class="empty-state">
-    <div class="icon">&#128202;</div>
-    <p>No results found<?= $filtered ? ' for this filter' : '' ?>.</p>
-  </div>
-<?php else: ?>
-  <div class="table-wrapper">
-    <table>
-      <thead>
-        <tr>
-          <th>#</th><th>Student</th><th>Email</th><th>Exam</th>
-          <th>Score</th><th>%</th><th>Status</th><th>Date</th>
-        </tr>
-      </thead>
-      <tbody>
-        <?php foreach ($results as $i => $result):
-            $pct    = percentage((int) $result['score'], (int) $result['total']);
-            $passed = is_pass($pct);
-        ?>
-          <tr>
-            <td><?= $i + 1 ?></td>
-            <td><strong><?= e($result['student_name']) ?></strong></td>
-            <td class="text-muted"><?= e($result['email']) ?></td>
-            <td><?= e($result['exam_title']) ?></td>
-            <td><?= (int) $result['score'] ?>/<?= (int) $result['total'] ?></td>
-            <td>
-              <div class="cell-progress">
-                <div class="progress-bar progress-bar-inline progress-bar-narrow">
-                  <div class="progress-bar-fill <?= $passed ? 'fill-success' : 'fill-danger' ?>"
-                       style="width:<?= $pct ?>%"></div>
-                </div>
-                <span class="cell-progress-value"><?= $pct ?>%</span>
-              </div>
-            </td>
-            <td><span class="badge <?= e(score_badge($pct)) ?>"><?= $passed ? 'PASS' : 'FAIL' ?></span></td>
-            <td class="text-muted"><?= e(format_date($result['date_taken'])) ?></td>
-          </tr>
+<div class="table-card">
+  <form class="table-toolbar" method="GET" action="<?= e(url($path)) ?>">
+    <input type="hidden" name="sort" value="<?= e($sort->key) ?>">
+    <input type="hidden" name="dir" value="<?= e($sort->direction) ?>">
+
+    <div class="field">
+      <label class="field-label" for="q">Search</label>
+      <span class="field-affix">
+        <?= icon('search') ?>
+        <input type="search" id="q" name="q" class="field-input"
+               placeholder="Student or exam" value="<?= e($search) ?>">
+      </span>
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="student_id">Student</label>
+      <select id="student_id" name="student_id" class="field-input">
+        <option value="">All students</option>
+        <?php foreach ($students as $student): ?>
+          <option value="<?= (int) $student['student_id'] ?>"
+            <?= $studentId === (int) $student['student_id'] ? 'selected' : '' ?>>
+            <?= e($student['name']) ?>
+          </option>
         <?php endforeach; ?>
-      </tbody>
-    </table>
-  </div>
-<?php endif; ?>
+      </select>
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="exam_id">Exam</label>
+      <select id="exam_id" name="exam_id" class="field-input">
+        <option value="">All exams</option>
+        <?php foreach ($exams as $exam): ?>
+          <option value="<?= (int) $exam['exam_id'] ?>"
+            <?= $examId === (int) $exam['exam_id'] ? 'selected' : '' ?>>
+            <?= e($exam['title']) ?>
+          </option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+
+    <div class="btn-row">
+      <button type="submit" class="btn btn-secondary"><?= icon('filter') ?> Apply</button>
+      <?php if ($filtered): ?>
+        <a class="btn btn-ghost" href="<?= e(url($path)) ?>"><?= icon('x') ?> Clear</a>
+      <?php endif; ?>
+    </div>
+  </form>
+
+  <?php if ($results === []): ?>
+    <div class="empty">
+      <div class="empty-icon"><?= icon($filtered ? 'filter' : 'results') ?></div>
+      <?php if ($filtered): ?>
+        <p class="empty-title">No results match these filters</p>
+        <p class="empty-text">Try widening the search, or clear the filters to see everything.</p>
+        <div class="empty-actions">
+          <a class="btn btn-secondary" href="<?= e(url($path)) ?>">Clear filters</a>
+        </div>
+      <?php else: ?>
+        <p class="empty-title">No exams have been completed yet</p>
+        <p class="empty-text">
+          Results appear here the moment a student submits an exam, with their
+          score and whether they passed.
+        </p>
+      <?php endif; ?>
+    </div>
+  <?php else: ?>
+    <div class="table-scroll">
+      <table class="table table-stack">
+        <thead>
+          <tr>
+            <?php $sortHeader('student', 'Student'); ?>
+            <?php $sortHeader('exam', 'Exam'); ?>
+            <th scope="col">Score</th>
+            <?php $sortHeader('percentage', 'Percentage'); ?>
+            <th scope="col">Result</th>
+            <?php $sortHeader('date_taken', 'Date'); ?>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($results as $result):
+              $pct    = percentage((int) $result['score'], (int) $result['total']);
+              $passed = is_pass($pct);
+          ?>
+            <tr>
+              <td data-label="Student" class="cell-lead">
+                <span class="cell-primary"><?= e($result['student_name']) ?></span>
+                <span class="cell-sub"><?= e($result['email']) ?></span>
+              </td>
+              <td data-label="Exam"><?= e($result['exam_title']) ?></td>
+              <td data-label="Score"><?= (int) $result['score'] ?> of <?= (int) $result['total'] ?></td>
+              <td data-label="Percentage">
+                <div class="meter">
+                  <div class="progress <?= $passed ? 'progress-success' : 'progress-danger' ?>">
+                    <div class="progress-bar" style="width:<?= $pct ?>%"></div>
+                  </div>
+                  <span class="meter-value"><?= $pct ?>%</span>
+                </div>
+              </td>
+              <td data-label="Result">
+                <span class="status <?= $passed ? 'status-success' : 'status-danger' ?>">
+                  <?= $passed ? 'Passed' : 'Not passed' ?>
+                </span>
+              </td>
+              <td data-label="Date" class="cell-muted"><?= e(format_date($result['date_taken'])) ?></td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+
+    <?php \App\Core\View::partial('partials/pagination', [
+        'paginator' => $paginator, 'path' => $path, 'noun' => 'result',
+    ]); ?>
+  <?php endif; ?>
+</div>

@@ -85,14 +85,75 @@ final class ResultRepository
     }
 
     /**
-     * Admin listing, optionally filtered by student and/or exam.
+     * The columns the results list may be ordered by.
      *
-     * The WHERE clause is assembled from a fixed set of literal fragments;
-     * only bound values come from the request.
+     * A percentage is sorted on the computed ratio rather than on `score`,
+     * because 8/10 beats 9/20 and ordering by the raw score would say
+     * otherwise.
+     *
+     * @return array<string,string>
+     */
+    public static function sortableColumns(): array
+    {
+        return [
+            'student'    => 's.name',
+            'exam'       => 'e.title',
+            'percentage' => '(r.score / NULLIF(r.total, 0))',
+            'date_taken' => 'r.date_taken',
+        ];
+    }
+
+    /**
+     * One page of the admin results listing.
+     *
+     * The WHERE clause is assembled from a fixed set of literal fragments and
+     * $orderBy comes from Sorter's allowlist; only bound values come from the
+     * request. Limit and offset are interpolated after an integer cast, since
+     * a native prepared statement will not accept a string-bound LIMIT.
      *
      * @return list<array<string,mixed>>
      */
-    public function filtered(int $studentId = 0, int $examId = 0): array
+    public function paginateFiltered(
+        int $studentId,
+        int $examId,
+        string $search,
+        string $orderBy,
+        int $limit,
+        int $offset
+    ): array {
+        [$where, $params] = self::filterClause($studentId, $examId, $search);
+
+        return Database::fetchAll(
+            'SELECT r.result_id, r.score, r.total, r.date_taken,
+                    s.student_id, s.name AS student_name, s.email,
+                    e.exam_id, e.title AS exam_title
+               FROM results r
+               JOIN students s ON s.student_id = r.student_id
+               JOIN exams    e ON e.exam_id    = r.exam_id'
+            . $where
+            . ' ORDER BY ' . $orderBy
+            . ' LIMIT ' . max(1, $limit) . ' OFFSET ' . max(0, $offset),
+            $params
+        );
+    }
+
+    public function countFiltered(int $studentId, int $examId, string $search): int
+    {
+        [$where, $params] = self::filterClause($studentId, $examId, $search);
+
+        return Database::count(
+            'SELECT COUNT(*)
+               FROM results r
+               JOIN students s ON s.student_id = r.student_id
+               JOIN exams    e ON e.exam_id    = r.exam_id' . $where,
+            $params
+        );
+    }
+
+    /**
+     * @return array{0:string,1:list<mixed>}
+     */
+    private static function filterClause(int $studentId, int $examId, string $search): array
     {
         $conditions = [];
         $params     = [];
@@ -107,19 +168,17 @@ final class ResultRepository
             $params[]     = $examId;
         }
 
-        $where = $conditions === [] ? '' : ' WHERE ' . implode(' AND ', $conditions);
+        if ($search !== '') {
+            $term = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search) . '%';
 
-        return Database::fetchAll(
-            'SELECT r.result_id, r.score, r.total, r.date_taken,
-                    s.student_id, s.name AS student_name, s.email,
-                    e.exam_id, e.title AS exam_title
-               FROM results r
-               JOIN students s ON s.student_id = r.student_id
-               JOIN exams    e ON e.exam_id    = r.exam_id'
-            . $where .
-            ' ORDER BY r.date_taken DESC',
-            $params
-        );
+            $conditions[] = '(s.name LIKE ? OR s.email LIKE ? OR e.title LIKE ?)';
+            array_push($params, $term, $term, $term);
+        }
+
+        return [
+            $conditions === [] ? '' : ' WHERE ' . implode(' AND ', $conditions),
+            $params,
+        ];
     }
 
     /** Most recent attempts across all students, for the admin dashboard. */
