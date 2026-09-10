@@ -5,64 +5,108 @@
  * @var list<array<string,mixed>> $exams
  */
 ?>
-<div class="page-heading page-heading-split">
-  <div>
-    <h2>Manage Exams</h2>
-    <p class="text-muted">Create, edit, and delete examinations.</p>
+<div class="page-head">
+  <div class="page-head-text">
+    <h1 class="page-title">Exams</h1>
+    <p class="page-subtitle">Create, edit and remove examinations, and manage their questions.</p>
   </div>
-  <a href="<?= e(url('/admin/add_exam.php')) ?>" class="btn btn-primary">&#10133; Add New Exam</a>
+  <div class="page-actions">
+    <a class="btn btn-primary" href="<?= e(url('/admin/add_exam.php')) ?>">
+      <?= icon('plus') ?> New exam
+    </a>
+  </div>
 </div>
 
 <?php if ($exams === []): ?>
-  <div class="empty-state">
-    <div class="icon">&#128235;</div>
-    <p>No exams yet. <a href="<?= e(url('/admin/add_exam.php')) ?>">Create your first exam.</a></p>
+  <div class="card">
+    <div class="empty">
+      <div class="empty-icon"><?= icon('exams') ?></div>
+      <p class="empty-title">No exams yet</p>
+      <p class="empty-text">
+        An exam holds a title, a duration and a set of multiple-choice questions.
+        Create one and you can start adding questions to it straight away.
+      </p>
+      <div class="empty-actions">
+        <a class="btn btn-primary" href="<?= e(url('/admin/add_exam.php')) ?>">
+          <?= icon('plus') ?> Create your first exam
+        </a>
+      </div>
+    </div>
   </div>
 <?php else: ?>
-  <div class="table-wrapper">
-    <table>
-      <thead>
-        <tr>
-          <th>#</th><th>Title</th><th>Duration</th><th>Questions</th>
-          <th>Attempts</th><th>Created</th><th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <?php foreach ($exams as $i => $exam):
-            $attempts = (int) $exam['attempt_count'];
-            $warning  = $attempts > 0
-                ? sprintf(' This will also delete %d recorded result(s).', $attempts)
-                : '';
-        ?>
+  <div class="table-card">
+    <div class="table-caption">
+      <span><?= pluralise(count($exams), 'exam') ?></span>
+    </div>
+
+    <div class="table-scroll">
+      <table class="table table-stack">
+        <thead>
           <tr>
-            <td><?= $i + 1 ?></td>
-            <td><strong><?= e($exam['title']) ?></strong></td>
-            <td><?= (int) $exam['duration'] ?> min</td>
-            <td>
-              <span class="badge <?= (int) $exam['question_count'] > 0 ? 'badge-success' : 'badge-warning' ?>">
-                <?= (int) $exam['question_count'] ?>
-              </span>
-            </td>
-            <td><?= $attempts ?></td>
-            <td class="text-muted"><?= e(format_date($exam['created_at'])) ?></td>
-            <td class="cell-actions">
-              <a href="<?= e(url('/admin/edit_exam.php?id=' . (int) $exam['exam_id'])) ?>"
-                 class="btn btn-sm btn-warning">&#9999; Edit</a>
-              <a href="<?= e(url('/admin/questions.php?exam_id=' . (int) $exam['exam_id'])) ?>"
-                 class="btn btn-sm btn-primary">&#10067; Questions</a>
-              <form method="POST" action="<?= e(url('/admin/exams.php')) ?>" class="inline-form">
-                <?= csrf_field() ?>
-                <input type="hidden" name="action" value="delete">
-                <input type="hidden" name="exam_id" value="<?= (int) $exam['exam_id'] ?>">
-                <button type="submit" class="btn btn-sm btn-danger"
-                        data-confirm="Delete &quot;<?= e($exam['title']) ?>&quot; and all its data?<?= e($warning) ?>">
-                  &#128465; Delete
-                </button>
-              </form>
-            </td>
+            <th scope="col">Title</th>
+            <th scope="col">Duration</th>
+            <th scope="col">Questions</th>
+            <th scope="col">Attempts</th>
+            <th scope="col">Created</th>
+            <th scope="col"><span class="sr-only">Actions</span></th>
           </tr>
-        <?php endforeach; ?>
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          <?php foreach ($exams as $exam):
+              $examId    = (int) $exam['exam_id'];
+              $questions = (int) $exam['question_count'];
+              $attempts  = (int) $exam['attempt_count'];
+
+              $consequence = sprintf(
+                  'Deleting "%s" removes its %s%s. This cannot be undone.',
+                  $exam['title'],
+                  pluralise($questions, 'question'),
+                  $attempts > 0
+                      ? ' and the ' . pluralise($attempts, 'recorded result')
+                      : ''
+              );
+          ?>
+            <tr>
+              <td data-label="Title" class="cell-primary cell-lead"><?= e($exam['title']) ?></td>
+              <td data-label="Duration"><?= pluralise((int) $exam['duration'], 'minute') ?></td>
+              <td data-label="Questions">
+                <?php if ($questions === 0): ?>
+                  <span class="badge badge-warning">None yet</span>
+                <?php else: ?>
+                  <?= $questions ?>
+                <?php endif; ?>
+              </td>
+              <td data-label="Attempts"><?= $attempts ?></td>
+              <td data-label="Created" class="cell-muted"><?= e(format_date($exam['created_at'])) ?></td>
+              <td class="cell-actions" data-label="">
+                <div class="btn-row">
+                  <a class="btn btn-secondary btn-sm"
+                     href="<?= e(url('/admin/questions.php?exam_id=' . $examId)) ?>">
+                    <?= icon('checklist') ?> Questions
+                  </a>
+                  <a class="btn btn-secondary btn-sm btn-icon"
+                     href="<?= e(url('/admin/edit_exam.php?id=' . $examId)) ?>"
+                     aria-label="Edit <?= e($exam['title']) ?>">
+                    <?= icon('edit') ?>
+                  </a>
+                  <form method="POST" action="<?= e(url('/admin/exams.php')) ?>" class="inline-form">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="exam_id" value="<?= $examId ?>">
+                    <button type="submit" class="btn btn-danger-ghost btn-sm btn-icon"
+                            aria-label="Delete <?= e($exam['title']) ?>"
+                            data-confirm-title="Delete this exam?"
+                            data-confirm="<?= e($consequence) ?>"
+                            data-confirm-label="Delete exam">
+                      <?= icon('trash') ?>
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
   </div>
 <?php endif; ?>
