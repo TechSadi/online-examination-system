@@ -35,6 +35,7 @@ $correct  = (string) ($old['correct_answer'] ?? ($editQuestion['correct_answer']
     <div class="card-header"><?= $isEdit ? '&#9999; Edit Question' : '&#10133; Add Question' ?></div>
     <div class="card-body">
       <form method="POST" novalidate>
+        <?= csrf_field() ?>
         <input type="hidden" name="exam_id" value="<?= (int) $exam['exam_id'] ?>">
         <input type="hidden" name="question_id" value="<?= (int) ($editQuestion['question_id'] ?? 0) ?>">
 
@@ -98,6 +99,7 @@ $correct  = (string) ($old['correct_answer'] ?? ($editQuestion['correct_answer']
                           . '&edit_q=' . (int) $question['question_id'])) ?>"
                      class="btn btn-sm btn-warning" aria-label="Edit question <?= $i + 1 ?>">&#9999;</a>
                   <form method="POST" action="<?= e(url('/admin/questions.php')) ?>" class="inline-form">
+                    <?= csrf_field() ?>
                     <input type="hidden" name="action" value="delete">
                     <input type="hidden" name="exam_id" value="<?= (int) $exam['exam_id'] ?>">
                     <input type="hidden" name="question_id" value="<?= (int) $question['question_id'] ?>">

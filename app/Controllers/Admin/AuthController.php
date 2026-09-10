@@ -128,8 +128,19 @@ final class AuthController
         );
     }
 
+    /**
+     * Sign out.
+     *
+     * POST only. The CSRF guard lets safe methods through untouched, so a
+     * GET here would still sign the user out - and any third-party page
+     * could trigger it with an image tag.
+     */
     public function logout(): void
     {
+        if (!Request::isPost()) {
+            Response::redirect('/admin/login.php');
+        }
+
         Auth::logoutAdmin();
         Response::redirect('/admin/login.php');
     }

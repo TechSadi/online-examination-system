@@ -11,6 +11,7 @@ declare(strict_types=1);
  */
 
 use App\Core\Config;
+use App\Core\Csrf;
 use App\Core\Url;
 use App\Services\GradingService;
 
@@ -40,6 +41,32 @@ if (!function_exists('asset')) {
     function asset(string $path): string
     {
         return Url::asset($path);
+    }
+}
+
+if (!function_exists('csrf_token')) {
+    /** The current session's CSRF token. */
+    function csrf_token(): string
+    {
+        return Csrf::token();
+    }
+}
+
+if (!function_exists('csrf_field')) {
+    /**
+     * The hidden input every state-changing form needs.
+     *
+     * Rendering it through a helper rather than by hand means the field name
+     * and the token source cannot drift apart across the twenty-odd forms in
+     * this application.
+     */
+    function csrf_field(): string
+    {
+        return sprintf(
+            '<input type="hidden" name="%s" value="%s">',
+            e(Csrf::FIELD),
+            e(Csrf::token())
+        );
     }
 }
 

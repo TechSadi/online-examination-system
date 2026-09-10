@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Middleware;
 
+use App\Core\Csrf;
 use App\Core\Flash;
 use App\Core\Response;
 use App\Core\Session;
@@ -42,10 +43,17 @@ final class Auth
         return (string) Session::get(self::STUDENT_NAME, '');
     }
 
-    /** @param array{student_id:int|string,name:string} $student */
+    /**
+     * @param array{student_id:int|string,name:string} $student
+     *
+     * The session id and the CSRF token are both replaced before the
+     * identity is written, so neither a session nor a token captured before
+     * sign-in carries any authority after it.
+     */
     public static function loginStudent(array $student): void
     {
         Session::regenerate();
+        Csrf::rotate();
         Session::put(self::STUDENT_ID, (int) $student['student_id']);
         Session::put(self::STUDENT_NAME, (string) $student['name']);
     }
@@ -73,6 +81,7 @@ final class Auth
     public static function loginAdmin(array $admin): void
     {
         Session::regenerate();
+        Csrf::rotate();
         Session::put(self::ADMIN_ID, (int) $admin['admin_id']);
         Session::put(self::ADMIN_USER, (string) $admin['username']);
         Session::put(self::ADMIN_NAME, (string) ($admin['full_name'] ?: $admin['username']));
@@ -120,7 +129,7 @@ final class Auth
     {
         Session::forget(self::STUDENT_ID);
         Session::forget(self::STUDENT_NAME);
-        Session::destroy();
+        self::finishLogout();
     }
 
     public static function logoutAdmin(): void
@@ -128,6 +137,28 @@ final class Auth
         Session::forget(self::ADMIN_ID);
         Session::forget(self::ADMIN_USER);
         Session::forget(self::ADMIN_NAME);
+        self::finishLogout();
+    }
+
+    /**
+     * Complete a sign-out after one role's keys have been dropped.
+     *
+     * Signing out of one role must not silently sign the other out too - an
+     * administrator reviewing the student experience in the same browser
+     * would otherwise lose their admin session. So the session is destroyed
+     * outright only once nobody is left signed in; while another role
+     * remains, the id and the CSRF token are rotated instead, which is what
+     * actually invalidates the credential that was just given up.
+     */
+    private static function finishLogout(): void
+    {
+        if (self::isStudent() || self::isAdmin()) {
+            Session::regenerate();
+            Csrf::rotate();
+
+            return;
+        }
+
         Session::destroy();
     }
 }

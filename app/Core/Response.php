@@ -49,6 +49,29 @@ final class Response
         self::redirect($path);
     }
 
+    /**
+     * Redirect back to the path that was just requested, as a GET.
+     *
+     * Used to turn away a rejected POST without leaving it replayable by a
+     * refresh. 303 See Other is what makes the browser re-request with GET.
+     *
+     * The path comes from REQUEST_URI, so it is already on this origin, but
+     * it is still normalised before use: a request for "//evil.example/x"
+     * would otherwise produce a protocol-relative Location header and turn
+     * this into an open redirect.
+     */
+    public static function redirectToCurrentPath(): never
+    {
+        $path = Url::current();
+
+        if ($path === '' || $path[0] !== '/' || str_starts_with($path, '//') || str_starts_with($path, '/' . chr(92))) {
+            self::redirect('/');
+        }
+
+        header('Location: ' . $path, true, 303);
+        exit;
+    }
+
     /** Send a bare status code and stop. */
     public static function abort(int $status): never
     {

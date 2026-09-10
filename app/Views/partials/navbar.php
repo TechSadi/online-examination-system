@@ -16,10 +16,18 @@ use App\Middleware\Auth;
       <a href="<?= e(url('/student/dashboard.php')) ?>">&#127968; Dashboard</a>
       <a href="<?= e(url('/student/exams.php')) ?>">&#128203; Exams</a>
       <a href="<?= e(url('/student/results.php')) ?>">&#128202; My Results</a>
-      <a href="<?= e(url('/student/logout.php')) ?>" class="btn-logout">&#128682; Logout</a>
+      <?php \App\Core\View::partial('partials/logout_form', [
+          'action' => '/student/logout.php',
+          'class'  => 'btn-logout',
+          'label'  => '&#128682; Logout',
+      ]); ?>
     <?php elseif ($role === 'admin' && Auth::isAdmin()): ?>
       <a href="<?= e(url('/admin/dashboard.php')) ?>">&#127968; Dashboard</a>
-      <a href="<?= e(url('/admin/logout.php')) ?>" class="btn-logout">&#128682; Logout</a>
+      <?php \App\Core\View::partial('partials/logout_form', [
+          'action' => '/admin/logout.php',
+          'class'  => 'btn-logout',
+          'label'  => '&#128682; Logout',
+      ]); ?>
     <?php else: ?>
       <a href="<?= e(url('/')) ?>">Home</a>
       <a href="<?= e(url('/student/login.php')) ?>">Student Login</a>

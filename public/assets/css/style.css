@@ -105,10 +105,19 @@ img { max-width: 100%; display: block; }
 .navbar-brand { font-family: var(--font-display); font-size: 1.35rem; color: #fff; display: flex; align-items: center; gap: 10px; }
 .navbar-brand span { color: #f9c74f; }
 .navbar-links { display: flex; align-items: center; gap: 6px; }
-.navbar-links a { color: rgba(255,255,255,.82); padding: 7px 14px; border-radius: 6px; font-size: .88rem; font-weight: 500; transition: background var(--transition), color var(--transition); }
-.navbar-links a:hover, .navbar-links a.active { background: rgba(255,255,255,.15); color: #fff; }
+.navbar-links a,
+.navbar-links .logout-form button { color: rgba(255,255,255,.82); padding: 7px 14px; border-radius: 6px; font-size: .88rem; font-weight: 500; transition: background var(--transition), color var(--transition); }
+.navbar-links a:hover, .navbar-links a.active,
+.navbar-links .logout-form button:hover { background: rgba(255,255,255,.15); color: #fff; }
 .btn-logout { background: var(--clr-accent) !important; color: #fff !important; margin-left: 8px; }
 .btn-logout:hover { background: #c94d1a !important; }
+
+/* Signing out is a POST, so its control is a <button>. These rules strip the
+   browser's button chrome so it sits in the navigation exactly as the link it
+   replaced did. */
+.logout-form { display: inline; margin: 0; }
+.navbar-links .logout-form { display: inline-flex; }
+.logout-form button { font-family: inherit; background: none; border: none; cursor: pointer; }
 
 /* ── Page Header ────────────────────────────────────────── */
 .page-header { background: linear-gradient(135deg, var(--clr-primary) 0%, #2454a0 100%); color: #fff; padding: 48px 24px; text-align: center; }
@@ -275,8 +284,11 @@ footer strong { color: #fff; }
 .sidebar { width: 240px; background: #0d2245; flex-shrink: 0; padding: 20px 0; }
 .sidebar-section { padding: 12px 20px 6px; font-size: .7rem; color: rgba(255,255,255,.4); text-transform: uppercase; letter-spacing: .1em; font-weight: 700; }
 .sidebar-menu { list-style: none; }
-.sidebar-menu li a { display: flex; align-items: center; gap: 12px; padding: 12px 24px; color: rgba(255,255,255,.68); font-size: .88rem; font-weight: 500; transition: all var(--transition); border-left: 3px solid transparent; }
-.sidebar-menu li a:hover, .sidebar-menu li a.active { background: rgba(255,255,255,.09); color: #fff; border-left-color: var(--clr-accent); padding-left: 21px; }
+.sidebar-menu li a,
+.sidebar-menu li .sidebar-logout { display: flex; align-items: center; gap: 12px; padding: 12px 24px; color: rgba(255,255,255,.68); font-size: .88rem; font-weight: 500; transition: all var(--transition); border-left: 3px solid transparent; }
+.sidebar-menu li a:hover, .sidebar-menu li a.active,
+.sidebar-menu li .sidebar-logout:hover { background: rgba(255,255,255,.09); color: #fff; border-left-color: var(--clr-accent); padding-left: 21px; }
+.sidebar-menu li .sidebar-logout { width: 100%; text-align: left; }
 .sidebar-menu .menu-icon { font-size: 1rem; width: 20px; text-align: center; }
 .admin-content { flex: 1; padding: 32px; overflow-y: auto; }
 @media (max-width: 900px) { .sidebar { display: none; } .admin-content { padding: 20px 16px; } }

@@ -49,9 +49,11 @@ $sections = [
   <p class="sidebar-section">Account</p>
   <ul class="sidebar-menu">
     <li>
-      <a href="<?= e(url('/admin/logout.php')) ?>">
-        <span class="menu-icon">&#128682;</span> Logout
-      </a>
+      <?php \App\Core\View::partial('partials/logout_form', [
+          'action' => '/admin/logout.php',
+          'class'  => 'sidebar-logout',
+          'label'  => '<span class="menu-icon">&#128682;</span> Logout',
+      ]); ?>
     </li>
   </ul>
 </aside>

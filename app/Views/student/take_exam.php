@@ -31,6 +31,7 @@ $count   = count($questions);
   <div class="exam-layout">
     <div>
       <form id="exam-form" method="POST" action="<?= e(url('/student/submit_exam.php')) ?>">
+        <?= csrf_field() ?>
         <input type="hidden" name="exam_id" value="<?= (int) $exam['exam_id'] ?>">
 
         <?php foreach ($questions as $index => $question): ?>

@@ -51,6 +51,7 @@
               <a href="<?= e(url('/admin/questions.php?exam_id=' . (int) $exam['exam_id'])) ?>"
                  class="btn btn-sm btn-primary">&#10067; Questions</a>
               <form method="POST" action="<?= e(url('/admin/exams.php')) ?>" class="inline-form">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="delete">
                 <input type="hidden" name="exam_id" value="<?= (int) $exam['exam_id'] ?>">
                 <button type="submit" class="btn btn-sm btn-danger"

@@ -15,6 +15,7 @@
   <div class="card-header">&#128737; New Administrator</div>
   <div class="card-body">
     <form method="POST" novalidate>
+      <?= csrf_field() ?>
       <div class="form-group">
         <label for="full_name">Full Name *</label>
         <input type="text" id="full_name" name="full_name" class="form-control"
