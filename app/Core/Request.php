@@ -64,19 +64,24 @@ final class Request
     }
 
     /**
-     * A non-negative integer from POST, then GET.
-     * Anything non-numeric becomes the default, so "abc" never becomes 0
-     * by accident and then matches a record.
+     * An integer from POST, then GET.
+     *
+     * Strict: only an optional sign followed by digits is accepted. The
+     * previous is_numeric() test let through values PHP would happily cast
+     * but nobody meant - "12.9" became 12, "1e3" became 1000, " 12" became
+     * 12 - which is how a malformed id quietly turns into a valid one.
      */
     public static function int(string $key, int $default = 0): int
     {
         $value = $_POST[$key] ?? $_GET[$key] ?? null;
 
-        if ($value === null || !is_scalar($value) || !is_numeric((string) $value)) {
+        if ($value === null || !is_scalar($value)) {
             return $default;
         }
 
-        return (int) $value;
+        $raw = trim((string) $value);
+
+        return preg_match('/^-?[0-9]{1,18}$/', $raw) === 1 ? (int) $raw : $default;
     }
 
     /** A positive record identifier, or 0 when absent or invalid. */
@@ -85,6 +90,28 @@ final class Request
         $id = self::int($key, 0);
 
         return $id > 0 ? $id : 0;
+    }
+
+    /**
+     * Whether a key was supplied but does not name a usable identifier.
+     *
+     * Lets a caller tell "no filter" apart from "a filter that is nonsense",
+     * so a malformed id can be rejected instead of silently behaving as
+     * though nothing was asked for.
+     */
+    public static function hasInvalidId(string $key): bool
+    {
+        if (!self::has($key)) {
+            return false;
+        }
+
+        $value = $_POST[$key] ?? $_GET[$key] ?? null;
+
+        if (!is_scalar($value) || trim((string) $value) === '') {
+            return false;
+        }
+
+        return self::id($key) === 0;
     }
 
     public static function has(string $key): bool
