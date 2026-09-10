@@ -67,8 +67,47 @@ CREATE TABLE IF NOT EXISTS questions (
     INDEX idx_questions_exam (exam_id)
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS exam_attempts (
+    attempt_id   INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    student_id   INT UNSIGNED NOT NULL,
+    exam_id      INT UNSIGNED NOT NULL,
+    started_at   DATETIME NOT NULL,
+    expires_at   DATETIME NOT NULL,
+    submitted_at DATETIME NULL DEFAULT NULL,
+    status       ENUM('in_progress', 'submitted', 'expired') NOT NULL DEFAULT 'in_progress',
+    score        SMALLINT UNSIGNED NULL DEFAULT NULL,
+    total        SMALLINT UNSIGNED NULL DEFAULT NULL,
+    FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE,
+    FOREIGN KEY (exam_id)    REFERENCES exams(exam_id)       ON DELETE CASCADE,
+    UNIQUE KEY uq_attempts_student_exam (student_id, exam_id),
+    INDEX idx_attempts_status (status, expires_at)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS attempt_answers (
+    attempt_id  INT UNSIGNED NOT NULL,
+    question_id INT UNSIGNED NOT NULL,
+    selected    TINYINT UNSIGNED NULL DEFAULT NULL,
+    is_correct  TINYINT(1) NOT NULL DEFAULT 0,
+    PRIMARY KEY (attempt_id, question_id),
+    FOREIGN KEY (attempt_id)  REFERENCES exam_attempts(attempt_id) ON DELETE CASCADE,
+    FOREIGN KEY (question_id) REFERENCES questions(question_id)    ON DELETE CASCADE,
+    CONSTRAINT chk_attempt_answers_selected
+        CHECK (selected IS NULL OR selected BETWEEN 1 AND 4)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS login_attempts (
+    attempt_id   BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    role         ENUM('student', 'admin') NOT NULL,
+    identifier   VARCHAR(190) NOT NULL,
+    ip_address   VARBINARY(16) NOT NULL,
+    attempted_at DATETIME NOT NULL,
+    INDEX idx_login_attempts_identifier (role, identifier, attempted_at),
+    INDEX idx_login_attempts_ip (ip_address, attempted_at)
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS results (
     result_id  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    attempt_id INT UNSIGNED NULL DEFAULT NULL,
     student_id INT UNSIGNED NOT NULL,
     exam_id    INT UNSIGNED NOT NULL,
     score      SMALLINT UNSIGNED NOT NULL DEFAULT 0,
@@ -76,7 +115,9 @@ CREATE TABLE IF NOT EXISTS results (
     date_taken TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE,
     FOREIGN KEY (exam_id)    REFERENCES exams(exam_id) ON DELETE CASCADE,
+    FOREIGN KEY (attempt_id) REFERENCES exam_attempts(attempt_id) ON DELETE CASCADE,
     UNIQUE KEY unique_attempt (student_id, exam_id),
+    UNIQUE KEY uq_results_attempt (attempt_id),
     INDEX idx_results_date_taken (date_taken),
     INDEX idx_results_student_date (student_id, date_taken)
 ) ENGINE=InnoDB;
