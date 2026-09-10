@@ -9,6 +9,7 @@
  *   [data-loading]                        forms that report their own submit
  *   [data-menu]                           dropdown menus
  *   [data-drawer-toggle]                  the navigation drawer
+ *   [data-theme-picker]                   light / dark / system
  *
  * Everything degrades: with JavaScript unavailable, alerts stay on screen,
  * forms post normally, and the destructive-action confirmation falls back to
@@ -290,12 +291,112 @@
     });
   }
 
+  /* ── Theme ────────────────────────────────────────────── */
+
+  /* The server has already stamped the theme onto <html> from the cookie, so
+     the page arrived in the right colours and there is nothing to correct on
+     load. This only handles changing it: write the same cookie, move the
+     attribute, and repaint in place rather than making a round trip for a
+     preference. The <details> element the picker is built on opens and closes
+     by itself; what it does not give is click-outside or Escape, so those are
+     added here.
+
+     With scripting off, the form inside the picker posts to theme.php and the
+     server does exactly the same thing. */
+
+  var THEME_COOKIE = 'examhub_theme';
+  var THEME_MAX_AGE = 31536000;
+
+  function writeThemeCookie(theme, basePath) {
+    var attributes = '; path=' + basePath + '; samesite=lax'
+      + (window.location.protocol === 'https:' ? '; secure' : '');
+
+    if (theme === 'system') {
+      document.cookie = THEME_COOKIE + '=; max-age=0' + attributes;
+      return;
+    }
+
+    document.cookie = THEME_COOKIE + '=' + theme + '; max-age=' + THEME_MAX_AGE + attributes;
+  }
+
+  function applyTheme(picker, theme) {
+    if (theme === 'system') {
+      document.documentElement.removeAttribute('data-theme');
+    } else {
+      document.documentElement.setAttribute('data-theme', theme);
+    }
+
+    picker.querySelectorAll('[data-theme-value]').forEach(function (option) {
+      var chosen = option.getAttribute('data-theme-value') === theme;
+      option.setAttribute('aria-pressed', chosen ? 'true' : 'false');
+
+      if (chosen) {
+        /* The trigger reports the theme in force, so its icon and its
+           accessible name follow the choice. */
+        var summary = picker.querySelector('summary');
+        var label = option.querySelector('span');
+
+        summary.querySelector('use').setAttribute(
+          'href',
+          option.querySelector('use').getAttribute('href')
+        );
+
+        if (label) {
+          summary.setAttribute('aria-label', 'Theme: ' + label.textContent.trim());
+        }
+      }
+    });
+  }
+
+  function initTheme() {
+    var picker = document.querySelector('[data-theme-picker]');
+
+    if (!picker) {
+      return;
+    }
+
+    /* The cookie is scoped to the application, not the host, so it does not
+       follow the reader into the next project sharing this origin. The form's
+       own action carries that base path already. */
+    var action = picker.querySelector('form').getAttribute('action');
+    var basePath = action.replace(/\/theme\.php$/, '') + '/';
+
+    picker.addEventListener('click', function (event) {
+      var option = event.target.closest('[data-theme-value]');
+
+      if (!option) {
+        return;
+      }
+
+      event.preventDefault();
+
+      var theme = option.getAttribute('data-theme-value');
+      writeThemeCookie(theme, basePath);
+      applyTheme(picker, theme);
+      picker.open = false;
+    });
+
+    document.addEventListener('click', function (event) {
+      if (picker.open && !picker.contains(event.target)) {
+        picker.open = false;
+      }
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && picker.open) {
+        picker.open = false;
+        picker.querySelector('summary').focus();
+      }
+    });
+  }
+
   function init() {
     initAlerts();
     initLoadingForms();
     initConfirm();
     initMenus();
     initDrawer();
+    initTheme();
   }
 
   if (document.readyState === 'loading') {

@@ -107,4 +107,20 @@ final class Url
 
         return $pos === false ? $uri : substr($uri, 0, $pos);
     }
+
+    /**
+     * The current request path including its query string.
+     *
+     * Used where a form has to return the user to exactly where they were.
+     * Dropping the query would send someone who changed the theme on
+     * "?q=jawara&sort=name&page=2" back to an unfiltered first page, which
+     * reads as the control having done something it did not.
+     *
+     * Callers must still validate this as a redirect target - it comes from
+     * REQUEST_URI, which is client-controlled.
+     */
+    public static function currentWithQuery(): string
+    {
+        return (string) ($_SERVER['REQUEST_URI'] ?? '/');
+    }
 }

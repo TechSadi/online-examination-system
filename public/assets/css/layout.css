@@ -420,3 +420,67 @@
   grid-template-columns: repeat(auto-fill, minmax(288px, 1fr));
   gap: var(--sp-5);
 }
+
+/* ── Theme picker ───────────────────────────────────────── */
+/* A <details> dressed as the dropdown beside it, so it opens
+   without JavaScript. The marker is removed on both selectors
+   browsers use for it. */
+.theme-picker { position: relative; }
+.theme-picker > summary { list-style: none; }
+.theme-picker > summary::-webkit-details-marker { display: none; }
+.theme-picker > summary::marker { content: ""; }
+
+.theme-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: var(--sp-2);
+  height: 34px;
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--dur-fast) var(--ease-in-out),
+              border-color var(--dur-fast) var(--ease-in-out),
+              color var(--dur-fast) var(--ease-in-out);
+}
+
+.theme-trigger:hover {
+  background: var(--color-surface-sunken);
+  border-color: var(--color-border);
+  color: var(--color-text-strong);
+}
+
+.theme-picker[open] > .theme-trigger {
+  background: var(--color-surface-sunken);
+  border-color: var(--color-border);
+  color: var(--color-text-strong);
+}
+
+.theme-trigger-caret { width: 0.8rem; height: 0.8rem; color: var(--color-text-subtle); }
+
+/* The panel is the shared menu, one size down. */
+.menu-panel-sm { min-width: 184px; }
+
+.menu-header-sm {
+  padding-bottom: var(--sp-2);
+  color: var(--color-text-muted);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--ls-wider);
+  text-transform: uppercase;
+}
+
+/* The chosen option keeps its tick; the others reserve the space
+   so the labels do not shuffle sideways as the choice moves. */
+.theme-option { justify-content: flex-start; }
+.theme-option-check { margin-left: auto; opacity: 0; color: var(--color-primary); }
+.theme-option[aria-pressed="true"] { color: var(--color-primary-text); }
+.theme-option[aria-pressed="true"] .icon { color: var(--color-primary); }
+.theme-option[aria-pressed="true"] .theme-option-check { opacity: 1; }
+
+@media (max-width: 640px) {
+  .theme-trigger-caret { display: none; }
+  .theme-trigger { padding: var(--sp-1); }
+}

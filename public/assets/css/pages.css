@@ -19,7 +19,9 @@
 .hero {
   position: relative;
   padding-block: var(--sp-20) var(--sp-16);
-  background: var(--n-900);
+  /* Dark in both themes - it is a panel, not a surface - but it
+     lifts slightly in dark mode so it does not read as a hole. */
+  background: var(--color-surface-inverse);
   color: var(--n-0);
   overflow: hidden;
   isolation: isolate;
@@ -212,7 +214,7 @@
   flex-direction: column;
   justify-content: center;
   padding: var(--sp-12);
-  background: var(--n-900);
+  background: var(--color-surface-inverse);
   color: var(--n-0);
   overflow: hidden;
   isolation: isolate;
@@ -566,5 +568,9 @@
   border-color: var(--color-success-border);
   color: var(--color-success-text);
 }
-.option-chip.is-correct .option-chip-letter { color: var(--color-success); }
+/* The letter is text on a soft fill, so it takes the -text role
+   and its 4.5:1, not the solid fill colour that is tuned for
+   carrying white on a button. The tick beside it is a graphic
+   and 3:1 is enough for it. */
+.option-chip.is-correct .option-chip-letter { color: var(--color-success-text); }
 .option-chip.is-correct .icon { margin-left: auto; color: var(--color-success); }

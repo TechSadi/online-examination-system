@@ -61,6 +61,8 @@ $studentLinks = [
   <?php endif; ?>
 
   <div class="app-topbar-end">
+    <?php \App\Core\View::partial('partials/theme_picker'); ?>
+
     <?php if ($isStudent): ?>
       <?php \App\Core\View::partial('partials/account_menu', [
           'name'       => Auth::studentName(),

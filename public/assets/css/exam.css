@@ -126,8 +126,8 @@
 }
 
 @keyframes timer-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(217, 45, 32, .28); }
-  50%      { box-shadow: 0 0 0 6px rgba(217, 45, 32, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-danger) 30%, transparent); }
+  50%      { box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-danger) 0%, transparent); }
 }
 
 /* A notice between the exam bar and the questions: the resumed
@@ -427,7 +427,7 @@ kbd {
     padding-bottom: calc(var(--sp-3) + env(safe-area-inset-bottom));
     border-top: 1px solid var(--color-border);
     background: var(--color-surface);
-    box-shadow: 0 -4px 12px -6px rgba(20, 25, 34, .18);
+    box-shadow: 0 -4px 12px -6px rgb(var(--shadow-color) / .22);
   }
 
   .question-nav .btn { min-height: var(--tap-min); }

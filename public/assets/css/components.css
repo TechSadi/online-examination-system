@@ -110,7 +110,7 @@
 }
 .btn-secondary:not(:disabled):hover {
   --btn-bg: var(--color-surface-secondary);
-  --btn-border: var(--n-500);
+  --btn-border: var(--color-border-hover);
 }
 
 .btn-ghost { --btn-fg: var(--color-text-muted); }
@@ -148,8 +148,8 @@
   --btn-shadow: var(--shadow-xs);
 }
 .btn-success:not(:disabled):hover {
-  --btn-bg: var(--s-700);
-  --btn-border: var(--s-700);
+  --btn-bg: var(--color-success-hover);
+  --btn-border: var(--color-success-hover);
 }
 
 /* On a dark background (hero, topbar) a neutral button has to
@@ -266,7 +266,7 @@
     only ever an example. */
 .field-input::placeholder { color: var(--color-text-muted); }
 
-.field-input:hover:not(:disabled):not(:focus) { border-color: var(--n-500); }
+.field-input:hover:not(:disabled):not(:focus) { border-color: var(--color-border-hover); }
 
 .field-input:focus {
   outline: none;
@@ -302,7 +302,7 @@ select.field-input {
 
 .field-input.is-invalid:focus,
 .field.has-error .field-input:focus {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--d-500) 30%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger) 32%, transparent);
 }
 
 .field-hint {
@@ -527,8 +527,8 @@ select.field-input {
 }
 
 /* The row describing the person looking at the screen. */
-.table tr.row-highlight { background: var(--color-primary-soft); }
-.table tr.row-highlight:hover { background: var(--b-100); }
+.table tr.row-highlight { background: var(--color-row-highlight); }
+.table tr.row-highlight:hover { background: var(--color-row-highlight-hover); }
 
 /* Sortable headers ---------------------------------------- */
 .th-sort {
@@ -754,7 +754,9 @@ select.field-input {
   cursor: pointer;
   line-height: 0;
 }
-.alert-dismiss:hover { opacity: 1; background: rgba(0, 0, 0, .06); }
+/* Tinted from the alert's own text colour, so it darkens a pale
+   alert in light mode and lightens a near-black one in dark. */
+.alert-dismiss:hover { opacity: 1; background: color-mix(in srgb, currentColor 14%, transparent); }
 
 /* Validation summary inside a danger alert. */
 .alert-list { margin-top: var(--sp-2); padding-left: 1.1rem; list-style: disc; }

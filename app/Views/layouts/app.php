@@ -8,9 +8,10 @@
  */
 
 use App\Core\Icons;
+use App\Core\Theme;
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"<?= Theme::attribute() ?>>
 <head>
   <?php \App\Core\View::partial('partials/head', [
       'pageTitle'      => $pageTitle,

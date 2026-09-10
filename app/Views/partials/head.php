@@ -11,6 +11,8 @@
  * @var string $pageTitle
  * @var bool   $includeExamCSS  the exam interface loads one extra sheet
  */
+use App\Core\Theme;
+
 $appName = (string) config('app.name', 'ExamHub');
 
 $stylesheets = ['css/tokens.css', 'css/base.css', 'css/components.css', 'css/layout.css', 'css/pages.css'];
@@ -31,7 +33,7 @@ $favicon = 'data:image/svg+xml,' . rawurlencode(
 ?>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="light">
+<meta name="color-scheme" content="<?= e(Theme::colorScheme()) ?>">
 <meta name="description" content="<?= e($appName) ?> - a secure online examination platform for students and educators.">
 <title><?= e($pageTitle) ?> &middot; <?= e($appName) ?></title>
 <?php foreach ($stylesheets as $sheet): ?>
