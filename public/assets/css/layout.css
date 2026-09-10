@@ -1,0 +1,422 @@
+/* ============================================================
+   layout.css — the application shell
+   ------------------------------------------------------------
+   The frame every signed-in page sits in: top bar, admin
+   sidebar, the mobile drawer that replaces it, page headers,
+   containers and the footer.
+
+   Student and administrator share one shell. The difference
+   between them is which navigation it is given, not a second
+   set of chrome, so a person who has seen one already knows
+   where things are in the other.
+   ============================================================ */
+
+/* ── Page container ─────────────────────────────────────── */
+.container {
+  width: 100%;
+  max-width: var(--container);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.container-narrow { max-width: var(--container-narrow); }
+.container-wide   { max-width: var(--container-wide); }
+
+/* ── Top bar ────────────────────────────────────────────── */
+.app-topbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-header);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  height: var(--topbar-h);
+  padding-inline: var(--gutter);
+  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+  backdrop-filter: saturate(180%) blur(12px);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.app-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex: none;
+  color: var(--color-text-strong);
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--ls-tighter);
+}
+.app-brand:hover { color: var(--color-text-strong); text-decoration: none; }
+
+/* The mark is drawn, not an emoji: it renders identically on
+   every platform and takes the brand colour. */
+.app-brand-mark {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-md);
+  background: var(--color-primary);
+  color: var(--n-0);
+  box-shadow: var(--shadow-xs);
+}
+.app-brand-mark .icon { width: 1rem; height: 1rem; stroke-width: 2; }
+
+/* Distinguishes the administration console from the student app at a
+   glance, so an admin never mistakes one for the other. */
+.app-brand-tag {
+  padding: 2px var(--sp-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-full);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+}
+
+.app-topbar-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  margin-left: var(--sp-4);
+}
+
+.app-topbar-end {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-left: auto;
+}
+
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-md);
+  color: var(--color-text-muted);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-medium);
+  transition: background-color var(--dur-fast) var(--ease-in-out),
+              color var(--dur-fast) var(--ease-in-out);
+}
+.nav-link:hover { background: var(--color-surface-sunken); color: var(--color-text-strong); text-decoration: none; }
+.nav-link .icon { color: var(--color-text-subtle); }
+
+.nav-link[aria-current="page"] {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-text);
+  font-weight: var(--fw-semibold);
+}
+.nav-link[aria-current="page"] .icon { color: var(--color-primary); }
+
+/* The account control in the top-right corner. */
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: var(--r-full);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-text);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.account-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-2) var(--sp-1) var(--sp-1);
+  border: 1px solid transparent;
+  border-radius: var(--r-full);
+  background: none;
+  color: var(--color-text);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-in-out),
+              border-color var(--dur-fast) var(--ease-in-out);
+}
+.account-trigger:hover { background: var(--color-surface-sunken); border-color: var(--color-border); }
+.account-trigger[aria-expanded="true"] { background: var(--color-surface-sunken); border-color: var(--color-border); }
+.account-name { max-width: 15ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-trigger > .icon { width: 0.9rem; height: 0.9rem; color: var(--color-text-subtle); }
+
+/* Hamburger: only rendered on small screens. */
+.nav-toggle { display: none; }
+
+/* ── Shell with sidebar ─────────────────────────────────── */
+.app-shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+  flex: 1;
+  align-items: start;
+
+  /* The sidebar is sticky and only one viewport tall, so on a long
+     page its surface would stop partway down and leave the column
+     half-painted. Painting the column here means the panel reads as
+     continuous however far the content runs. */
+  background: linear-gradient(
+    to right,
+    var(--color-surface) 0 var(--sidebar-w),
+    var(--color-bg) var(--sidebar-w)
+  );
+}
+
+.app-sidebar {
+  position: sticky;
+  top: var(--topbar-h);
+  height: calc(100dvh - var(--topbar-h));
+  overflow-y: auto;
+  padding: var(--sp-5) var(--sp-3);
+  border-right: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.sidebar-group + .sidebar-group { margin-top: var(--sp-5); }
+
+.sidebar-heading {
+  padding: 0 var(--sp-3);
+  margin-bottom: var(--sp-2);
+  color: var(--color-text-muted);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--ls-wider);
+  text-transform: uppercase;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  border: 0;
+  border-radius: var(--r-md);
+  background: none;
+  color: var(--color-text-muted);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-medium);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-in-out),
+              color var(--dur-fast) var(--ease-in-out);
+}
+.sidebar-link + .sidebar-link { margin-top: 2px; }
+.sidebar-link:hover { background: var(--color-surface-sunken); color: var(--color-text-strong); text-decoration: none; }
+.sidebar-link .icon { color: var(--color-text-subtle); }
+
+.sidebar-link[aria-current="page"] {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-text);
+  font-weight: var(--fw-semibold);
+}
+.sidebar-link[aria-current="page"] .icon { color: var(--color-primary); }
+
+.sidebar-link-danger:hover { background: var(--color-danger-soft); color: var(--color-danger-text); }
+.sidebar-link-danger:hover .icon { color: var(--color-danger); }
+
+/* ── Main column ────────────────────────────────────────── */
+.app-main { flex: 1; min-width: 0; }
+
+/* Inside the shell the content column supplies its own gutter,
+   because the sidebar already occupies the left edge. */
+.app-shell .app-main { padding: var(--sp-7) var(--gutter) var(--sp-12); }
+
+/* ── Page header ────────────────────────────────────────── */
+/* Every page opens the same way: where you are, what it is,
+   and the action you most likely came to take. */
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-6);
+}
+
+.page-head-text { min-width: 0; }
+
+.page-title {
+  font-size: var(--fs-2xl);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-tighter);
+  color: var(--color-text-strong);
+}
+
+.page-subtitle {
+  margin-top: var(--sp-1);
+  font-size: var(--fs-md);
+  color: var(--color-text-muted);
+  max-width: 68ch;
+}
+
+.page-actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+
+/* Student pages are not inside the shell, so they carry their
+   own vertical rhythm. */
+.page { padding-block: var(--sp-7) var(--sp-12); }
+
+/* Region for flash messages, directly under the page header. */
+.page-messages:not(:empty) { margin-bottom: var(--sp-5); }
+
+/* ── Footer ─────────────────────────────────────────────── */
+.app-footer {
+  padding: var(--sp-5) var(--gutter);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+}
+
+.app-footer-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  max-width: var(--container);
+  margin-inline: auto;
+}
+
+/* The footer belongs to the page, not to the sidebar column. */
+.app-shell + .app-footer { border-top: 1px solid var(--color-border); }
+
+/* ── Mobile drawer ──────────────────────────────────────── */
+/* Below the breakpoint the sidebar becomes an off-canvas panel
+   opened from the top bar. Before this phase the admin sidebar
+   was simply display:none on small screens, which left every
+   administration screen unreachable from a phone. */
+.drawer-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  background: var(--color-overlay);
+  animation: fade-in var(--dur-base) var(--ease-out);
+}
+
+@media (min-width: 1024px) {
+  .drawer-scrim { display: none; }
+}
+
+@media (max-width: 1023px) {
+  /* Off-canvas: no column to paint. */
+  .app-shell { grid-template-columns: minmax(0, 1fr); background: none; }
+
+  .nav-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    flex: none;
+    margin-left: calc(var(--sp-2) * -1);
+    border: 1px solid transparent;
+    border-radius: var(--r-md);
+    background: none;
+    color: var(--color-text);
+    cursor: pointer;
+  }
+  .nav-toggle:hover { background: var(--color-surface-sunken); border-color: var(--color-border); }
+
+  /* The sidebar leaves the grid and becomes an off-canvas panel above the
+     scrim. It stays in the document either way, so the links are the same
+     links and the active state is decided in one place. */
+  .app-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: calc(var(--z-overlay) + 1);
+    width: min(300px, 84vw);
+    height: 100dvh;
+    padding-top: var(--sp-4);
+    box-shadow: var(--shadow-xl);
+    transform: translateX(-100%);
+    transition: transform var(--dur-slow) var(--ease-out);
+  }
+
+  .app-sidebar.is-open { transform: none; }
+
+  .drawer-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    padding: 0 var(--sp-3) var(--sp-4);
+    margin-bottom: var(--sp-2);
+    border-bottom: 1px solid var(--color-border-subtle);
+  }
+
+  /* The page behind the drawer must not scroll with it. */
+  body.has-drawer-open { overflow: hidden; }
+}
+
+@media (min-width: 1024px) {
+  .drawer-head { display: none; }
+}
+
+@media (max-width: 640px) {
+  .app-shell .app-main { padding-top: var(--sp-5); }
+  .page { padding-block: var(--sp-5) var(--sp-8); }
+  .page-head { align-items: flex-start; }
+  .page-actions { width: 100%; }
+  .page-actions .btn { flex: 1 1 auto; }
+
+  /* Student navigation stays in the bar rather than moving behind a
+     hamburger: three destinations fit as icons, and one tap beats two.
+     The label is hidden from sight but not from assistive technology, so
+     each link keeps its accessible name. */
+  .app-topbar { gap: var(--sp-2); padding-inline: var(--sp-3); }
+  .app-topbar-nav { margin-left: var(--sp-1); gap: 2px; }
+  .nav-link { padding: var(--sp-2); min-width: 40px; justify-content: center; }
+  .nav-link-label {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  .app-brand-text, .app-brand-tag { display: none; }
+  .account-name { display: none; }
+  .app-topbar-end { gap: var(--sp-1); }
+}
+
+/* The public bar has room for its links until the buttons crowd them. */
+@media (max-width: 560px) {
+  .app-topbar-nav-public { display: none; }
+}
+
+/* ── Layout primitives shared by pages ──────────────────── */
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--sp-5);
+  align-items: start;
+}
+
+/* An asymmetric two-column split: a form beside its results. */
+.grid-split {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: var(--sp-5);
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .grid-split { grid-template-columns: minmax(0, 1fr); }
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(288px, 1fr));
+  gap: var(--sp-5);
+}

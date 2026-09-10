@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 use App\Core\Config;
 use App\Core\Csrf;
+use App\Core\Icons;
 use App\Core\Url;
 use App\Services\GradingService;
 
@@ -37,7 +38,7 @@ if (!function_exists('url')) {
 }
 
 if (!function_exists('asset')) {
-    /** Build an asset URL: asset('css/style.css'). */
+    /** Build an asset URL: asset('css/app.css'). */
     function asset(string $path): string
     {
         return Url::asset($path);
@@ -141,5 +142,78 @@ if (!function_exists('old')) {
     function old(array $old, string $key, mixed $default = ''): string
     {
         return (string) ($old[$key] ?? $default);
+    }
+}
+
+if (!function_exists('icon')) {
+    /**
+     * An icon from the application set: icon('trash', 'icon-lg').
+     *
+     * Decorative by default. Pass $label only when the icon is the control's
+     * only description, as on an icon-only button.
+     */
+    function icon(string $name, string $class = '', ?string $label = null): string
+    {
+        return Icons::render($name, $class, $label);
+    }
+}
+
+if (!function_exists('initials')) {
+    /**
+     * One or two letters standing in for a person in an avatar.
+     *
+     * Falls back to a neutral glyph rather than rendering an empty circle
+     * when a name is blank.
+     */
+    function initials(string $name): string
+    {
+        $words = preg_split('/\s+/', trim($name), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        if ($words === []) {
+            return '?';
+        }
+
+        $first = mb_substr($words[0], 0, 1);
+        $last  = count($words) > 1 ? mb_substr($words[count($words) - 1], 0, 1) : '';
+
+        return mb_strtoupper($first . $last);
+    }
+}
+
+if (!function_exists('pluralise')) {
+    /**
+     * "1 question" / "12 questions", so counts read as sentences instead of
+     * as "1 question(s)".
+     */
+    function pluralise(int $count, string $singular, ?string $plural = null): string
+    {
+        $word = $count === 1 ? $singular : ($plural ?? $singular . 's');
+
+        return number_format($count) . ' ' . $word;
+    }
+}
+
+if (!function_exists('query_url')) {
+    /**
+     * The current page with some query parameters changed.
+     *
+     * Sorting a filtered, paginated table must not silently drop the filter,
+     * and paging must not reset the sort. Building every such link by hand is
+     * how one of them ends up forgetting a parameter, so they are all built
+     * here from the request that is already in flight. A null value removes
+     * the parameter rather than sending it empty.
+     *
+     * @param array<string,int|string|null> $changes
+     */
+    function query_url(string $path, array $changes): string
+    {
+        $query = array_merge($_GET, $changes);
+
+        $query = array_filter(
+            $query,
+            static fn ($value) => $value !== null && $value !== '' && is_scalar($value)
+        );
+
+        return url($path) . ($query === [] ? '' : '?' . http_build_query($query));
     }
 }
