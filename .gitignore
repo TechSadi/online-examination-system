@@ -1,1 +1,15 @@
+# Local environment — never commit real credentials
+.env
+
+# Runtime logs
+storage/logs/*.log
+
+# Editor / OS noise
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+.DS_Store
+
+# Agent instructions
 CLAUDE.md

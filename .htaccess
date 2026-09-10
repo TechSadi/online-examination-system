@@ -1,0 +1,24 @@
+# ============================================================
+#  ExamHub - Apache configuration
+#
+#  The application is served from this directory, so the
+#  non-public parts must be denied explicitly. Without this,
+#  database/schema.sql was downloadable over HTTP, exposing the
+#  schema and the seeded administrator password hash.
+# ============================================================
+
+Options -Indexes
+
+# Deny the environment file, dependency-free source tree, SQL and logs.
+<FilesMatch "^\.env">
+  Require all denied
+</FilesMatch>
+
+<FilesMatch "\.(sql|log|md)$">
+  Require all denied
+</FilesMatch>
+
+RedirectMatch 404 ^/.*/(app|database|storage)/.*$
+
+# Default document.
+DirectoryIndex index.php
