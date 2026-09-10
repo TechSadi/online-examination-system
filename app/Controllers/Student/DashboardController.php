@@ -40,6 +40,10 @@ final class DashboardController
             'remaining'     => max(0, $totalExams - $attempted),
             'avgScore'      => $this->results->averagePercentForStudent($studentId),
             'recentResults' => $this->results->historyForStudent($studentId, self::RECENT_LIMIT),
+            // The dashboard leads with the single action the student is most
+            // likely to have come for, rather than making them find it in a
+            // list on another page.
+            'nextExam'      => $this->exams->nextForStudent($studentId),
         ]);
     }
 }
