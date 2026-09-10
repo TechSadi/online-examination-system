@@ -1,10 +1,11 @@
 /**
- * exam.js - Exam countdown timer and question navigation.
+ * exam.js - the examination interface.
  *
  * Reads its configuration from the DOM:
  *   #timer-display[data-seconds-remaining]  time left, calculated by the server
- *   .question-slide[data-index]             one per question
- *   .q-nav-btn[data-index]                  question navigator buttons
+ *   .question[data-index]                   one section per question
+ *   .q-nav[data-index]                      navigator buttons
+ *   [data-flag][data-index]                 per-question flag toggles
  *
  * The countdown is a convenience, not a control. The authoritative deadline
  * is exam_attempts.expires_at, fixed when the attempt began and re-checked
@@ -18,231 +19,397 @@
  *
  * The answers a student picks are carried by the radio inputs themselves,
  * which the form posts normally. Grading happens server-side against the
- * answer key in the database; nothing here influences the score.
+ * answer key in the database; nothing here influences the score. Flags are
+ * a reading aid only - they are never submitted.
  */
 (function () {
   'use strict';
 
-  var currentQuestion = 0;
-  var timerInterval = null;
+  var WARNING_AT  = 300;  /* five minutes */
+  var CRITICAL_AT = 60;   /* one minute   */
+
+  /* Milestones announced to assistive technology. Announcing every tick
+     would make a screen reader read the clock aloud continuously, which is
+     unusable; these are the moments that actually change a decision. */
+  var ANNOUNCE_AT = [600, 300, 60, 30];
+
+  var current = 0;
   var secondsLeft = 0;
+  var interval = null;
+  var submitting = false;
+  var flags = Object.create(null);
+  var storageKey = null;
 
-  var timerDisplay, timerWidget, timerLabel;
-  var questionSlides, navButtons;
-  var prevBtn, nextBtn, submitBtn;
+  var form, timerEl, timerValue, announcer;
+  var questions, navButtons, flagButtons;
+  var prevBtn, nextBtn, submitBtn, confirmBtn;
   var progressFill, progressLabel;
+  var dialog, unansweredBox, overlay;
 
-  /* Timer */
+  /* ── Time ─────────────────────────────────────────────── */
 
-  function formatTime(totalSeconds) {
-    var minutes = Math.floor(totalSeconds / 60);
-    var seconds = totalSeconds % 60;
+  function formatTime(total) {
+    var safe = Math.max(0, total);
+    var minutes = Math.floor(safe / 60);
+    var seconds = safe % 60;
+
     return String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
   }
 
-  function updateTimerStyle() {
-    timerWidget.classList.remove('warning', 'danger');
-    if (secondsLeft <= 60) {
-      timerWidget.classList.add('danger');
-    } else if (secondsLeft <= 300) {
-      timerWidget.classList.add('warning');
+  /** "4 minutes" / "30 seconds", for the spoken announcement. */
+  function describe(total) {
+    if (total >= 60) {
+      var minutes = Math.round(total / 60);
+      return minutes + (minutes === 1 ? ' minute' : ' minutes');
     }
+
+    return total + ' seconds';
+  }
+
+  function paintTimer() {
+    timerValue.textContent = formatTime(secondsLeft);
+
+    timerEl.classList.toggle('is-warning', secondsLeft <= WARNING_AT && secondsLeft > CRITICAL_AT);
+    timerEl.classList.toggle('is-critical', secondsLeft <= CRITICAL_AT);
   }
 
   function tick() {
     secondsLeft -= 1;
-    timerDisplay.textContent = formatTime(Math.max(0, secondsLeft));
-    updateTimerStyle();
+    paintTimer();
+
+    if (ANNOUNCE_AT.indexOf(secondsLeft) !== -1) {
+      announcer.textContent = describe(secondsLeft) + ' remaining in this exam.';
+    }
 
     if (secondsLeft <= 0) {
-      clearInterval(timerInterval);
-      timerLabel.textContent = 'Time Up!';
-      autoSubmit();
+      window.clearInterval(interval);
+      submitExam(true);
     }
   }
 
-  function startTimer(remainingSeconds) {
-    secondsLeft = remainingSeconds;
-    timerDisplay.textContent = formatTime(Math.max(0, secondsLeft));
-    updateTimerStyle();
+  function startTimer(remaining) {
+    secondsLeft = remaining;
+    paintTimer();
 
     if (secondsLeft <= 0) {
-      timerLabel.textContent = 'Time Up!';
-      autoSubmit();
+      submitExam(true);
       return;
     }
 
-    timerInterval = setInterval(tick, 1000);
+    interval = window.setInterval(tick, 1000);
   }
 
-  /* Answer tracking */
+  /* ── Answers ──────────────────────────────────────────── */
 
-  function answeredIndexes() {
-    var answered = [];
-    questionSlides.forEach(function (slide, index) {
-      if (slide.querySelector('input[type="radio"]:checked')) {
-        answered.push(index);
+  function isAnswered(index) {
+    return questions[index].querySelector('input[type="radio"]:checked') !== null;
+  }
+
+  function answeredCount() {
+    return questions.reduce(function (total, _question, index) {
+      return total + (isAnswered(index) ? 1 : 0);
+    }, 0);
+  }
+
+  function unansweredIndexes() {
+    var pending = [];
+
+    questions.forEach(function (_question, index) {
+      if (!isAnswered(index)) {
+        pending.push(index);
       }
     });
-    return answered;
+
+    return pending;
   }
 
-  function updateProgress() {
-    var answered = answeredIndexes();
+  /* ── Flags ────────────────────────────────────────────── */
 
-    answered.forEach(function (index) {
-      if (navButtons[index]) {
-        navButtons[index].classList.add('answered');
-      }
-    });
+  /* Flags survive a reload of the same attempt. They are per-tab state about
+     how the student is reading the paper, so sessionStorage is the right
+     home for them: nothing here belongs on the server. */
 
-    if (progressFill) {
-      progressFill.style.width =
-        Math.round((answered.length / questionSlides.length) * 100) + '%';
-    }
-    if (progressLabel) {
-      progressLabel.textContent = answered.length + ' / ' + questionSlides.length + ' answered';
-    }
-  }
-
-  /* Navigation */
-
-  function showQuestion(index) {
-    if (index < 0 || index >= questionSlides.length) {
+  function loadFlags() {
+    if (!storageKey) {
       return;
     }
 
-    questionSlides.forEach(function (slide) {
-      slide.classList.remove('active');
+    try {
+      var stored = window.sessionStorage.getItem(storageKey);
+
+      (stored ? JSON.parse(stored) : []).forEach(function (index) {
+        flags[index] = true;
+      });
+    } catch (error) {
+      /* Private browsing, a disabled store, or corrupt JSON. Flags are an
+         aid, not state the exam depends on, so losing them is harmless. */
+    }
+  }
+
+  function saveFlags() {
+    if (!storageKey) {
+      return;
+    }
+
+    try {
+      window.sessionStorage.setItem(storageKey, JSON.stringify(Object.keys(flags).map(Number)));
+    } catch (error) {
+      /* See loadFlags. */
+    }
+  }
+
+  function toggleFlag(index) {
+    if (flags[index]) {
+      delete flags[index];
+    } else {
+      flags[index] = true;
+    }
+
+    saveFlags();
+    paintFlag(index);
+    paintNavigator();
+  }
+
+  function paintFlag(index) {
+    var button = flagButtons[index];
+
+    if (!button) {
+      return;
+    }
+
+    var flagged = Boolean(flags[index]);
+    var label = button.querySelector('[data-flag-label]');
+
+    button.setAttribute('aria-pressed', flagged ? 'true' : 'false');
+    button.classList.toggle('is-flagged', flagged);
+
+    if (label) {
+      label.textContent = flagged ? 'Flagged' : 'Flag';
+    }
+  }
+
+  /* ── Navigator and progress ───────────────────────────── */
+
+  function paintNavigator() {
+    navButtons.forEach(function (button, index) {
+      var answered = isAnswered(index);
+      var flagged = Boolean(flags[index]);
+
+      button.classList.toggle('is-answered', answered);
+      button.classList.toggle('is-current', index === current);
+      button.classList.toggle('is-flagged', flagged);
+
+      /* The state has to be in the accessible name too: the colour of the
+         tile is not available to a screen reader. */
+      button.setAttribute(
+        'aria-label',
+        'Question ' + (index + 1) + ', ' + (answered ? 'answered' : 'unanswered')
+          + (flagged ? ', flagged' : '')
+          + (index === current ? ', current' : '')
+      );
+      button.setAttribute('aria-current', index === current ? 'true' : 'false');
     });
-    questionSlides[index].classList.add('active');
+  }
 
-    navButtons.forEach(function (button, i) {
-      button.classList.toggle('current', i === index);
-      button.setAttribute('aria-current', i === index ? 'true' : 'false');
+  function paintProgress() {
+    var answered = answeredCount();
+
+    progressFill.style.width = Math.round((answered / questions.length) * 100) + '%';
+    progressLabel.textContent = answered + ' of ' + questions.length + ' answered';
+  }
+
+  /* ── Navigation ───────────────────────────────────────── */
+
+  function show(index) {
+    if (index < 0 || index >= questions.length) {
+      return;
+    }
+
+    questions.forEach(function (question, i) {
+      question.classList.toggle('is-active', i === index);
     });
 
-    currentQuestion = index;
+    current = index;
 
-    var isLast = index === questionSlides.length - 1;
+    var isLast = index === questions.length - 1;
+
     prevBtn.disabled = index === 0;
     nextBtn.hidden = isLast;
     submitBtn.hidden = !isLast;
+
+    paintNavigator();
   }
 
-  function bindOptions() {
-    document.querySelectorAll('.option-item').forEach(function (item) {
-      item.addEventListener('click', function () {
-        var radio = this.querySelector('input[type="radio"]');
-        if (!radio) {
-          return;
-        }
+  /* ── Submission ───────────────────────────────────────── */
 
-        this.closest('.options-list')
-          .querySelectorAll('.option-item')
-          .forEach(function (sibling) {
-            sibling.classList.remove('selected');
-          });
+  function openSubmitDialog() {
+    var pending = unansweredIndexes();
 
-        this.classList.add('selected');
-        radio.checked = true;
-        updateProgress();
+    if (pending.length === 0) {
+      unansweredBox.hidden = true;
+    } else {
+      unansweredBox.hidden = false;
+      unansweredBox.className = 'submit-summary';
+      unansweredBox.textContent = '';
+
+      var heading = document.createElement('p');
+      heading.textContent = pending.length === 1
+        ? 'One question is still unanswered:'
+        : pending.length + ' questions are still unanswered:';
+      unansweredBox.appendChild(heading);
+
+      var list = document.createElement('p');
+      list.className = 'submit-summary-list';
+
+      pending.forEach(function (index) {
+        var tag = document.createElement('span');
+        tag.textContent = String(index + 1);
+        list.appendChild(tag);
       });
-    });
-  }
 
-  /* Submission */
-
-  function doSubmit() {
-    clearInterval(timerInterval);
-    window.removeEventListener('beforeunload', warnBeforeUnload);
-
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Submitting...';
-
-    document.getElementById('exam-form').submit();
-  }
-
-  function autoSubmit() {
-    var toast = document.createElement('div');
-    toast.className = 'alert alert-warning exam-toast';
-    toast.setAttribute('role', 'alert');
-    toast.innerHTML = '&#9200; <strong>Time is up!</strong> Your exam is being submitted...';
-    document.body.appendChild(toast);
-    setTimeout(doSubmit, 1800);
-  }
-
-  function confirmSubmit() {
-    var unanswered = questionSlides.length - answeredIndexes().length;
-    var message = 'Are you sure you want to submit the exam?';
-
-    if (unanswered > 0) {
-      message = 'You have ' + unanswered + ' unanswered question(s). Submit anyway?';
+      unansweredBox.appendChild(list);
     }
 
-    if (window.confirm(message)) {
-      doSubmit();
+    if (typeof dialog.showModal === 'function') {
+      dialog.showModal();
+    } else {
+      /* No <dialog> support: fall back to the browser's own confirmation
+         rather than submitting an exam without asking. */
+      if (window.confirm('Submit your exam? You cannot return to these questions.')) {
+        submitExam(false);
+      }
     }
   }
 
-  function warnBeforeUnload(event) {
-    if (answeredIndexes().length < questionSlides.length) {
-      event.preventDefault();
-      event.returnValue = '';
-    }
-  }
-
-  /* Init */
-
-  document.addEventListener('DOMContentLoaded', function () {
-    timerDisplay = document.getElementById('timer-display');
-    timerWidget = document.getElementById('timer-widget');
-    timerLabel = document.getElementById('timer-label');
-    prevBtn = document.getElementById('btn-prev');
-    nextBtn = document.getElementById('btn-next');
-    submitBtn = document.getElementById('btn-submit');
-    progressFill = document.getElementById('exam-progress-fill');
-    progressLabel = document.getElementById('exam-progress-label');
-
-    questionSlides = Array.prototype.slice.call(document.querySelectorAll('.question-slide'));
-    navButtons = Array.prototype.slice.call(document.querySelectorAll('.q-nav-btn'));
-
-    if (!timerDisplay || questionSlides.length === 0 || !prevBtn || !nextBtn || !submitBtn) {
+  /**
+   * Hand the paper in.
+   *
+   * @param {boolean} expired true when the clock ran out rather than the
+   *                          student choosing to submit.
+   */
+  function submitExam(expired) {
+    if (submitting) {
       return;
     }
 
-    prevBtn.addEventListener('click', function () {
-      showQuestion(currentQuestion - 1);
+    submitting = true;
+    window.clearInterval(interval);
+    window.removeEventListener('beforeunload', warnBeforeUnload);
+
+    if (dialog.open) {
+      dialog.close();
+    }
+
+    overlay.querySelector('p').textContent = expired
+      ? 'Time is up. Submitting your answers…'
+      : 'Submitting your answers…';
+    overlay.hidden = false;
+
+    /* Submitted immediately. There is no pause for effect here: on an expired
+       attempt every second of delay is a second closer to the grace period
+       running out. */
+    form.submit();
+  }
+
+  function warnBeforeUnload(event) {
+    if (submitting) {
+      return;
+    }
+
+    event.preventDefault();
+    event.returnValue = '';
+  }
+
+  /* ── Init ─────────────────────────────────────────────── */
+
+  function init() {
+    form          = document.getElementById('exam-form');
+    timerEl       = document.getElementById('exam-timer');
+    timerValue    = document.getElementById('timer-display');
+    announcer     = document.getElementById('timer-announcer');
+    prevBtn       = document.getElementById('btn-prev');
+    nextBtn       = document.getElementById('btn-next');
+    submitBtn     = document.getElementById('btn-submit');
+    confirmBtn    = document.getElementById('confirm-submit');
+    progressFill  = document.getElementById('exam-progress-fill');
+    progressLabel = document.getElementById('exam-progress-label');
+    dialog        = document.getElementById('submit-dialog');
+    unansweredBox = document.getElementById('submit-unanswered');
+    overlay       = document.getElementById('exam-submitting');
+
+    questions   = Array.prototype.slice.call(document.querySelectorAll('.question'));
+    navButtons  = Array.prototype.slice.call(document.querySelectorAll('.q-nav'));
+    flagButtons = Array.prototype.slice.call(document.querySelectorAll('[data-flag]'));
+
+    if (!form || !timerValue || questions.length === 0 || !prevBtn || !nextBtn || !submitBtn) {
+      return;
+    }
+
+    var examField = form.querySelector('input[name="exam_id"]');
+    storageKey = examField ? 'examhub.flags.' + examField.value : null;
+
+    prevBtn.addEventListener('click', function () { show(current - 1); });
+    nextBtn.addEventListener('click', function () { show(current + 1); });
+    submitBtn.addEventListener('click', openSubmitDialog);
+
+    if (confirmBtn) {
+      confirmBtn.addEventListener('click', function () { submitExam(false); });
+    }
+
+    dialog.querySelectorAll('[data-dialog-cancel]').forEach(function (button) {
+      button.addEventListener('click', function () { dialog.close(); });
     });
-    nextBtn.addEventListener('click', function () {
-      showQuestion(currentQuestion + 1);
-    });
-    submitBtn.addEventListener('click', confirmSubmit);
 
     navButtons.forEach(function (button, index) {
-      button.addEventListener('click', function () {
-        showQuestion(index);
-      });
+      button.addEventListener('click', function () { show(index); });
+    });
+
+    flagButtons.forEach(function (button, index) {
+      button.addEventListener('click', function () { toggleFlag(index); });
+    });
+
+    /* Delegated, so it covers every radio on the page with one listener. */
+    form.addEventListener('change', function (event) {
+      if (event.target.matches('input[type="radio"]')) {
+        paintProgress();
+        paintNavigator();
+      }
     });
 
     document.addEventListener('keydown', function (event) {
-      if (event.target.matches('input, textarea, select')) {
+      if (event.altKey || event.ctrlKey || event.metaKey) {
         return;
       }
-      if (event.key === 'ArrowRight') {
-        showQuestion(currentQuestion + 1);
+
+      /* Never steal an arrow key from a control that uses it: the radio
+         group in the current question is navigated with arrows. */
+      if (event.target.closest('input, textarea, select, dialog')) {
+        return;
       }
-      if (event.key === 'ArrowLeft') {
-        showQuestion(currentQuestion - 1);
+
+      if (event.key === 'ArrowRight') {
+        show(current + 1);
+      } else if (event.key === 'ArrowLeft') {
+        show(current - 1);
       }
     });
 
-    bindOptions();
-    showQuestion(0);
-    updateProgress();
-    var remaining = parseInt(timerDisplay.dataset.secondsRemaining, 10);
+    loadFlags();
+    flagButtons.forEach(function (_button, index) { paintFlag(index); });
+
+    show(0);
+    paintProgress();
+    paintNavigator();
+
+    var remaining = parseInt(timerValue.dataset.secondsRemaining, 10);
     startTimer(isNaN(remaining) ? 0 : remaining);
 
     window.addEventListener('beforeunload', warnBeforeUnload);
-  });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();

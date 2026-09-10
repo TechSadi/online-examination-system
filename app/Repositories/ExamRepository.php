@@ -74,6 +74,32 @@ final class ExamRepository
         );
     }
 
+    /**
+     * The exam a student should sit next: the oldest one they have not
+     * completed that actually has questions in it.
+     *
+     * Oldest rather than newest, so a queue of outstanding exams is worked
+     * through in the order it was set rather than in reverse.
+     *
+     * @return array<string,mixed>|null
+     */
+    public function nextForStudent(int $studentId): ?array
+    {
+        return Database::fetch(
+            'SELECT e.exam_id,
+                    e.title,
+                    e.duration,
+                    (SELECT COUNT(*) FROM questions q WHERE q.exam_id = e.exam_id) AS question_count
+               FROM exams e
+              WHERE EXISTS (SELECT 1 FROM questions q WHERE q.exam_id = e.exam_id)
+                AND NOT EXISTS (SELECT 1 FROM results r
+                                 WHERE r.exam_id = e.exam_id AND r.student_id = ?)
+           ORDER BY e.created_at ASC, e.exam_id ASC
+              LIMIT 1',
+            [$studentId]
+        );
+    }
+
     /** Number of exams that actually have at least one question. */
     public function countTakeable(): int
     {

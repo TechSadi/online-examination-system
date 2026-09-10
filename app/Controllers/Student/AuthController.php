@@ -33,7 +33,7 @@ final class AuthController
 
         View::render('student/login', [
             'pageTitle' => 'Student Login',
-            'role'      => 'public',
+            'role'      => 'auth',
         ]);
     }
 
@@ -87,7 +87,7 @@ final class AuthController
 
         View::render('student/register', [
             'pageTitle' => 'Student Registration',
-            'role'      => 'public',
+            'role'      => 'auth',
         ]);
     }
 
@@ -117,7 +117,7 @@ final class AuthController
         if ($validator->fails()) {
             View::render('student/register', [
                 'pageTitle' => 'Student Registration',
-                'role'      => 'public',
+                'role'      => 'auth',
                 'errors'    => $validator->errors(),
                 'old'       => ['name' => $input['name'], 'email' => $input['email']],
             ]);
@@ -155,7 +155,7 @@ final class AuthController
     {
         View::render('student/login', [
             'pageTitle' => 'Student Login',
-            'role'      => 'public',
+            'role'      => 'auth',
             'errors'    => $errors,
             'old'       => ['email' => $email],
         ]);

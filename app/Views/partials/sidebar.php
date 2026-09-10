@@ -1,59 +1,60 @@
 <?php
 /**
- * Admin sidebar navigation.
+ * Admin navigation.
  *
- * The active link is decided here, from the current request path. The old
- * version used a global $currentFile plus a competing substring guess in
- * app.js; both are gone.
+ * The same markup is the persistent sidebar on a wide screen and the
+ * off-canvas drawer on a narrow one. Before this phase the sidebar was
+ * `display: none` below 900px with nothing offered in its place, so every
+ * administration screen was unreachable from a phone; the drawer is the fix,
+ * not a decoration.
+ *
+ * The active link is decided here, from the current request path.
  */
 
 use App\Core\Url;
 
 $current = basename(Url::current());
 
-$isActive = static fn (string $file): string => $current === $file ? 'active' : '';
-
 $sections = [
-    'Main' => [
-        ['dashboard.php', '&#127968;', 'Dashboard'],
+    'Overview' => [
+        ['dashboard.php', 'dashboard', 'Dashboard'],
     ],
-    'Exams' => [
-        ['exams.php',    '&#128203;', 'Manage Exams'],
-        ['add_exam.php', '&#10133;',  'Add Exam'],
+    'Assessment' => [
+        ['exams.php',     'exams',    'Exams'],
+        ['add_exam.php',  'plus',     'New exam'],
     ],
-    'Students' => [
-        ['students.php', '&#127891;', 'Manage Students'],
-        ['results.php',  '&#128202;', 'View Results'],
+    'People' => [
+        ['students.php',  'students', 'Students'],
+        ['results.php',   'results',  'Results'],
     ],
-    'Administrators' => [
-        ['admins.php',   '&#128737;', 'Manage Admins'],
-        ['register.php', '&#10133;',  'Add Admin'],
+    'Administration' => [
+        ['admins.php',    'admins',   'Administrators'],
+        ['register.php',  'plus',     'New administrator'],
     ],
 ];
 ?>
-<aside class="sidebar">
-  <?php foreach ($sections as $heading => $links): ?>
-    <p class="sidebar-section"><?= e($heading) ?></p>
-    <ul class="sidebar-menu">
-      <?php foreach ($links as [$file, $icon, $label]): ?>
-        <li>
-          <a href="<?= e(url('/admin/' . $file)) ?>" class="<?= $isActive($file) ?>"
-             <?= $isActive($file) === 'active' ? 'aria-current="page"' : '' ?>>
-            <span class="menu-icon"><?= $icon ?></span> <?= e($label) ?>
-          </a>
-        </li>
-      <?php endforeach; ?>
-    </ul>
-  <?php endforeach; ?>
+<aside class="app-sidebar" id="admin-nav" aria-label="Admin sections">
+  <div class="drawer-head">
+    <span class="app-brand">
+      <span class="app-brand-mark"><?= icon('logo') ?></span>
+      <span class="app-brand-text">ExamHub</span>
+    </span>
+    <button type="button" class="btn btn-ghost btn-icon btn-sm" data-drawer-close aria-label="Close navigation menu">
+      <?= icon('x') ?>
+    </button>
+  </div>
 
-  <p class="sidebar-section">Account</p>
-  <ul class="sidebar-menu">
-    <li>
-      <?php \App\Core\View::partial('partials/logout_form', [
-          'action' => '/admin/logout.php',
-          'class'  => 'sidebar-logout',
-          'label'  => '<span class="menu-icon">&#128682;</span> Logout',
-      ]); ?>
-    </li>
-  </ul>
+  <nav>
+    <?php foreach ($sections as $heading => $links): ?>
+      <div class="sidebar-group">
+        <p class="sidebar-heading"><?= e($heading) ?></p>
+        <?php foreach ($links as [$file, $iconName, $label]): ?>
+          <a class="sidebar-link" href="<?= e(url('/admin/' . $file)) ?>"
+             <?= $current === $file ? 'aria-current="page"' : '' ?>>
+            <?= icon($iconName) ?> <?= e($label) ?>
+          </a>
+        <?php endforeach; ?>
+      </div>
+    <?php endforeach; ?>
+  </nav>
 </aside>

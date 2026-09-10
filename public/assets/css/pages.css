@@ -1,0 +1,576 @@
+/* ============================================================
+   pages.css — compositions specific to one screen
+   ------------------------------------------------------------
+   Anything here is used by a single page. The moment a pattern
+   appears on a second one it should move to components.css
+   instead of being copied, which is how the previous stylesheet
+   ended up with four different card treatments.
+
+   Contents
+     1  Landing page
+     2  Authentication
+     3  Student dashboard
+     4  Exam catalogue
+     5  Result
+     6  Question manager
+   ============================================================ */
+
+/* ── 1. Landing page ────────────────────────────────────── */
+.hero {
+  position: relative;
+  padding-block: var(--sp-20) var(--sp-16);
+  /* Dark in both themes - it is a panel, not a surface - but it
+     lifts slightly in dark mode so it does not read as a hole. */
+  background: var(--color-surface-inverse);
+  color: var(--n-0);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* A single soft light source rather than a full-bleed gradient:
+   it gives the panel depth without turning the page into a
+   colour wash. */
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: -40% 20% auto -10%;
+  z-index: -1;
+  aspect-ratio: 1;
+  background: radial-gradient(circle, rgba(74, 107, 239, .38), transparent 62%);
+}
+
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, .04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, .04) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, #000 40%, transparent 100%);
+}
+
+.hero-inner { max-width: 44rem; }
+
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-3);
+  margin-bottom: var(--sp-5);
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: var(--r-full);
+  background: rgba(255, 255, 255, .06);
+  color: rgba(255, 255, 255, .8);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+}
+.hero-eyebrow .icon { width: 0.9rem; height: 0.9rem; color: var(--b-300); }
+
+.hero h1 {
+  font-size: var(--fs-display);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  color: var(--n-0);
+}
+
+.hero-lead {
+  margin-top: var(--sp-5);
+  max-width: 34rem;
+  font-size: var(--fs-lg);
+  line-height: var(--lh-relaxed);
+  color: rgba(255, 255, 255, .72);
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  margin-top: var(--sp-8);
+}
+
+.hero-note {
+  margin-top: var(--sp-5);
+  font-size: var(--fs-sm);
+  color: rgba(255, 255, 255, .64);
+}
+
+.section { padding-block: var(--sp-16); }
+.section-tight { padding-block: var(--sp-12); }
+.section-surface { background: var(--color-surface); }
+
+.section-head { max-width: 40rem; margin-bottom: var(--sp-8); }
+.section-head-center { margin-inline: auto; text-align: center; }
+
+.section-title {
+  font-size: var(--fs-2xl);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-tighter);
+}
+
+.section-lead {
+  margin-top: var(--sp-3);
+  font-size: var(--fs-lg);
+  color: var(--color-text-muted);
+  line-height: var(--lh-relaxed);
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(238px, 1fr));
+  gap: var(--sp-5);
+}
+
+.feature {
+  padding: var(--sp-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-lg);
+  background: var(--color-surface);
+}
+
+.feature-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin-bottom: var(--sp-4);
+  border: 1px solid var(--color-primary-soft-border);
+  border-radius: var(--r-md);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+.feature-icon .icon { width: 1.15rem; height: 1.15rem; }
+
+.feature h3 { font-size: var(--fs-lg); }
+.feature p { margin-top: var(--sp-2); font-size: var(--fs-md); color: var(--color-text-muted); }
+
+/* Closing call to action. */
+.cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-6);
+  padding: var(--sp-8);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+.cta-text { max-width: 44ch; }
+.cta h2 { font-size: var(--fs-xl); }
+.cta p { margin-top: var(--sp-2); color: var(--color-text-muted); }
+
+@media (max-width: 640px) {
+  .hero { padding-block: var(--sp-12) var(--sp-10); }
+  .section { padding-block: var(--sp-10); }
+  .hero-actions .btn { flex: 1 1 100%; }
+  .cta { padding: var(--sp-6); }
+}
+
+/* ── 2. Authentication ──────────────────────────────────── */
+/* A split screen: the form on the left where the eye starts,
+   context on the right. Below the breakpoint the context panel
+   is dropped rather than stacked - on a phone it would push the
+   form below the fold for no gain. */
+.auth {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  flex: 1;
+  min-height: calc(100dvh - var(--topbar-h));
+}
+
+.auth-form-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--sp-10) var(--gutter);
+  background: var(--color-surface);
+}
+
+.auth-form { width: 100%; max-width: 25rem; margin-inline: auto; }
+
+.auth-head { margin-bottom: var(--sp-7); }
+.auth-head h1 { font-size: var(--fs-2xl); }
+.auth-head p { margin-top: var(--sp-2); color: var(--color-text-muted); }
+
+.auth-messages:not(:empty) { margin-bottom: var(--sp-5); }
+
+.auth-alt {
+  margin-top: var(--sp-6);
+  padding-top: var(--sp-5);
+  border-top: 1px solid var(--color-border-subtle);
+  font-size: var(--fs-md);
+  color: var(--color-text-muted);
+}
+
+.auth-aside {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--sp-12);
+  background: var(--color-surface-inverse);
+  color: var(--n-0);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.auth-aside::before {
+  content: "";
+  position: absolute;
+  inset: auto -20% -30% 10%;
+  z-index: -1;
+  aspect-ratio: 1;
+  background: radial-gradient(circle, rgba(74, 107, 239, .35), transparent 62%);
+}
+
+.auth-aside blockquote {
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--ls-tight);
+  color: var(--n-0);
+  max-width: 26rem;
+}
+
+.auth-points { margin-top: var(--sp-8); display: grid; gap: var(--sp-4); max-width: 26rem; }
+
+.auth-point {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  color: rgba(255, 255, 255, .72);
+  font-size: var(--fs-md);
+  line-height: var(--lh-snug);
+}
+.auth-point .icon { color: var(--b-300); margin-top: 0.12rem; }
+.auth-point strong { color: var(--n-0); display: block; font-weight: var(--fw-semibold); }
+
+@media (max-width: 900px) {
+  .auth { grid-template-columns: minmax(0, 1fr); }
+  .auth-aside { display: none; }
+  .auth-form-col { background: var(--color-bg); }
+  .auth-form {
+    padding: var(--sp-6);
+    border: 1px solid var(--color-border);
+    border-radius: var(--r-lg);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-sm);
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-form-col { padding: var(--sp-5) var(--sp-4); }
+  .auth-form { padding: var(--sp-5) var(--sp-4); }
+}
+
+/* ── 3. Student dashboard ───────────────────────────────── */
+.greeting-title { font-size: var(--fs-3xl); letter-spacing: var(--ls-tighter); }
+.greeting-sub { margin-top: var(--sp-2); color: var(--color-text-muted); }
+
+/* The "next thing to do" panel. It is the only element on the
+   dashboard with a filled background, because it is the only
+   one that is an instruction rather than a report. */
+.next-up {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-5);
+  padding: var(--sp-5);
+  border: 1px solid var(--color-primary-soft-border);
+  border-radius: var(--r-lg);
+  background: var(--color-primary-soft);
+}
+
+.next-up-label {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--color-primary-text);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+}
+
+.next-up-title {
+  margin-top: var(--sp-2);
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semibold);
+  color: var(--color-text-strong);
+}
+
+.next-up-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  margin-top: var(--sp-2);
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+}
+.next-up-meta span { display: inline-flex; align-items: center; gap: var(--sp-1); }
+
+@media (max-width: 560px) {
+  .next-up .btn { width: 100%; }
+}
+
+/* ── 4. Exam catalogue ──────────────────────────────────── */
+.exam-card {
+  display: flex;
+  flex-direction: column;
+  padding: var(--sp-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-xs);
+  transition: border-color var(--dur-base) var(--ease-out),
+              box-shadow var(--dur-base) var(--ease-out);
+}
+.exam-card:hover { border-color: var(--color-border-strong); box-shadow: var(--shadow-md); }
+
+.exam-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+.exam-card-title {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-tight);
+  color: var(--color-text-strong);
+}
+
+.exam-card-desc {
+  margin-top: var(--sp-3);
+  font-size: var(--fs-md);
+  color: var(--color-text-muted);
+  line-height: var(--lh-snug);
+  /* Two lines, so a long description cannot make one card in a
+     row twice the height of its neighbours. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.exam-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  margin-top: var(--sp-4);
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--color-border-subtle);
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+}
+.exam-card-meta span { display: inline-flex; align-items: center; gap: var(--sp-2); }
+.exam-card-meta .icon { color: var(--color-text-subtle); }
+
+.exam-card-actions { margin-top: var(--sp-4); display: flex; gap: var(--sp-2); }
+.exam-card-actions .btn { flex: 1; }
+
+/* ── 5. Result ──────────────────────────────────────────── */
+.result-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8);
+  padding: var(--sp-8);
+}
+
+/* The score ring is drawn with a conic gradient: no canvas, no
+   SVG arithmetic, and it scales with the font size. --value is
+   set inline from the server-rendered percentage. */
+.score-ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 132px;
+  height: 132px;
+  flex: none;
+  border-radius: var(--r-full);
+  background: conic-gradient(var(--ring-color) calc(var(--value) * 1%), var(--color-surface-sunken) 0);
+}
+
+.score-ring::before {
+  content: "";
+  position: absolute;
+  inset: 11px;
+  border-radius: inherit;
+  background: var(--color-surface);
+}
+
+.score-ring-value {
+  position: relative;
+  font-size: var(--fs-3xl);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--ls-tighter);
+  color: var(--ring-color);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.score-ring-label {
+  position: relative;
+  margin-top: var(--sp-1);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.score-pass { --ring-color: var(--color-success); }
+.score-fail { --ring-color: var(--color-danger); }
+
+.result-summary { flex: 1; min-width: 240px; }
+.result-verdict { font-size: var(--fs-2xl); letter-spacing: var(--ls-tighter); }
+.result-note { margin-top: var(--sp-2); color: var(--color-text-muted); }
+.result-actions { margin-top: var(--sp-5); }
+
+.result-figures {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.result-figure {
+  padding: var(--sp-5);
+  text-align: center;
+}
+.result-figure + .result-figure { border-left: 1px solid var(--color-border-subtle); }
+
+.result-figure-value {
+  font-size: var(--fs-2xl);
+  font-weight: var(--fw-semibold);
+  color: var(--color-text-strong);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.result-figure-label {
+  margin-top: var(--sp-2);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 560px) {
+  .result-head { flex-direction: column; align-items: flex-start; gap: var(--sp-5); padding: var(--sp-5); }
+  .result-figures { grid-template-columns: minmax(0, 1fr); }
+  .result-figure + .result-figure { border-left: 0; border-top: 1px solid var(--color-border-subtle); }
+  .result-figure { display: flex; align-items: baseline; justify-content: space-between; text-align: left; }
+  .result-figure-label { margin-top: 0; }
+}
+
+/* ── 6. Question manager ────────────────────────────────── */
+/* The question being edited is marked in the list, so it is
+   obvious which row the form on the left belongs to. */
+.question-item.is-editing {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary);
+}
+
+/* Each answer option is entered beside its letter, so the form
+   mirrors how the question will be read. */
+.field-option {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+
+.field-option-letter {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-full);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+}
+
+.question-item-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+/* Edit and delete belong side by side. Left to wrap, they stack
+   and every row in the list grows a second line of chrome. */
+.question-item-head .btn-row { flex: none; flex-wrap: nowrap; }
+
+.question-item-text {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-medium);
+  color: var(--color-text-strong);
+  line-height: var(--lh-snug);
+}
+
+.question-item-number {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-right: var(--sp-2);
+  flex: none;
+  border-radius: var(--r-sm);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-bold);
+  font-variant-numeric: tabular-nums;
+  vertical-align: 2px;
+}
+
+.option-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--sp-2);
+  margin-top: var(--sp-4);
+}
+
+.option-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 38px;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-sm);
+  background: var(--color-surface-secondary);
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+}
+
+.option-chip-letter {
+  flex: none;
+  font-weight: var(--fw-bold);
+  color: var(--color-text-muted);
+}
+
+.option-chip.is-correct {
+  background: var(--color-success-soft);
+  border-color: var(--color-success-border);
+  color: var(--color-success-text);
+}
+/* The letter is text on a soft fill, so it takes the -text role
+   and its 4.5:1, not the solid fill colour that is tuned for
+   carrying white on a button. The tick beside it is a graphic
+   and 3:1 is enough for it. */
+.option-chip.is-correct .option-chip-letter { color: var(--color-success-text); }
+.option-chip.is-correct .icon { margin-left: auto; color: var(--color-success); }

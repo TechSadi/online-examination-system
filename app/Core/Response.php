@@ -72,6 +72,35 @@ final class Response
         exit;
     }
 
+    /**
+     * Redirect to a path supplied by the request, or to a fallback.
+     *
+     * Used where a form has to send the user back where they came from. The
+     * value is client-controlled, so it is checked rather than trusted:
+     * anything that is not a plain local path - an absolute URL, a
+     * protocol-relative "//evil.example/x", a backslash the browser may
+     * normalise into one - is discarded in favour of the fallback. Without
+     * that check a "return to where you were" field is an open redirect, and
+     * an open redirect on a real domain is what makes a phishing link
+     * believable.
+     *
+     * 303 See Other, so a refresh of the destination does not replay the POST.
+     */
+    public static function redirectToLocalPath(string $path, string $fallback = '/'): never
+    {
+        $isLocal = $path !== ''
+            && $path[0] === '/'
+            && !str_starts_with($path, '//')
+            && !str_starts_with($path, '/' . chr(92));
+
+        if (!$isLocal) {
+            self::redirect($fallback, 303);
+        }
+
+        header('Location: ' . $path, true, 303);
+        exit;
+    }
+
     /** Send a bare status code and stop. */
     public static function abort(int $status): never
     {

@@ -35,10 +35,25 @@ final class Url
         return $base === '' ? $path : $base . $path;
     }
 
-    /** Build a URL for a file under public/assets. */
+    /**
+     * Build a URL for a file under public/assets.
+     *
+     * The file's modification time is appended as a query string. Without it
+     * a redesigned stylesheet reaches returning visitors only once their
+     * cached copy expires, which is exactly the sort of half-updated page
+     * that gets reported as a rendering bug. With it, the URL changes the
+     * moment the file does, so the asset can be cached hard and still never
+     * be served stale.
+     */
     public static function asset(string $path): string
     {
-        return self::to('/public/assets/' . ltrim($path, '/'));
+        $relative = ltrim($path, '/');
+        $url      = self::to('/public/assets/' . $relative);
+        $file     = rtrim((string) Config::get('paths.root', ''), '/\\') . '/public/assets/' . $relative;
+
+        $modified = is_file($file) ? filemtime($file) : false;
+
+        return $modified === false ? $url : $url . '?v=' . $modified;
     }
 
     /**
@@ -91,5 +106,21 @@ final class Url
         $pos = strpos($uri, '?');
 
         return $pos === false ? $uri : substr($uri, 0, $pos);
+    }
+
+    /**
+     * The current request path including its query string.
+     *
+     * Used where a form has to return the user to exactly where they were.
+     * Dropping the query would send someone who changed the theme on
+     * "?q=jawara&sort=name&page=2" back to an unfiltered first page, which
+     * reads as the control having done something it did not.
+     *
+     * Callers must still validate this as a redirect target - it comes from
+     * REQUEST_URI, which is client-controlled.
+     */
+    public static function currentWithQuery(): string
+    {
+        return (string) ($_SERVER['REQUEST_URI'] ?? '/');
     }
 }

@@ -1,0 +1,240 @@
+/* ============================================================
+   base.css — reset, element defaults, typography, a11y
+   ------------------------------------------------------------
+   Styles bare HTML elements only. No class in this file names a
+   component; that is components.css's job. Keeping the split
+   means a plain <h2> or <table> already looks right, and a page
+   that forgets a class degrades gracefully instead of losing
+   its shape.
+   ============================================================ */
+
+/* ── Reset ──────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+* { margin: 0; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  tab-size: 4;
+}
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  line-height: var(--lh-normal);
+  color: var(--color-text);
+  background: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Media defaults to block so it never sits on a text baseline. */
+img, svg, video, canvas, iframe { display: block; max-width: 100%; }
+img, video { height: auto; }
+
+/* Controls do not inherit type by default. */
+button, input, select, textarea { font: inherit; color: inherit; }
+
+/* Long words (an email in a narrow table cell) must not push a
+   layout wider than the viewport. */
+p, h1, h2, h3, h4, h5, h6, li, td, th, dd, dt { overflow-wrap: break-word; }
+
+/* ── Typography ─────────────────────────────────────────── */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--color-text-strong);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-tight);
+  text-wrap: balance;
+}
+
+h1 { font-size: var(--fs-3xl); letter-spacing: var(--ls-tighter); }
+h2 { font-size: var(--fs-2xl); letter-spacing: var(--ls-tighter); }
+h3 { font-size: var(--fs-xl); }
+h4 { font-size: var(--fs-lg); }
+h5 { font-size: var(--fs-base); }
+h6 { font-size: var(--fs-md); }
+
+p { text-wrap: pretty; }
+
+small { font-size: var(--fs-xs); }
+
+strong, b { font-weight: var(--fw-semibold); color: var(--color-text-strong); }
+
+code, kbd, samp, pre {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+code {
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--r-xs);
+  padding: 0.1em 0.4em;
+}
+
+/* Figures reported in tables, timers and scores must not shift
+   width as their digits change. */
+.tnum, table td, table th, .timer-value, .stat-value {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Links ──────────────────────────────────────────────── */
+a {
+  color: var(--color-primary-text);
+  text-decoration: none;
+  transition: color var(--dur-fast) var(--ease-in-out);
+}
+
+a:hover { color: var(--color-primary-hover); text-decoration: underline; }
+
+/* ── Lists ──────────────────────────────────────────────── */
+ul, ol { padding: 0; list-style: none; }
+
+/* Prose lists inside body copy keep their markers. */
+.prose ul, .prose ol { padding-left: 1.25rem; }
+.prose ul { list-style: disc; }
+.prose ol { list-style: decimal; }
+.prose li + li { margin-top: var(--sp-1); }
+
+/* ── Tables ─────────────────────────────────────────────── */
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-weight: var(--fw-semibold); }
+
+/* ── Forms ──────────────────────────────────────────────── */
+fieldset { border: 0; padding: 0; }
+legend { padding: 0; }
+textarea { resize: vertical; }
+[hidden] { display: none !important; }
+
+/* ── Focus ──────────────────────────────────────────────── */
+/* One focus treatment for the whole application. It is defined
+   once here rather than per component so that no component can
+   quietly opt out of being keyboard-visible. :focus-visible
+   keeps it off pointer interactions without losing it for
+   keyboard users. */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--r-xs);
+}
+
+/* Elements that carry their own radius should not have the ring
+   square itself off around them. */
+.btn:focus-visible,
+.field-input:focus-visible,
+.card:focus-visible { border-radius: inherit; }
+
+/* ── Screen-reader and skip utilities ───────────────────── */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Visible again when focused: used by the skip link. */
+.skip-link {
+  position: absolute;
+  top: var(--sp-2);
+  left: var(--sp-2);
+  z-index: var(--z-toast);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--color-surface);
+  color: var(--color-primary-text);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-lg);
+  /* Parked well clear of the viewport: a translation of exactly its own
+     height still leaves the box shadow showing above the top bar. */
+  transform: translateY(-300%);
+  transition: transform var(--dur-base) var(--ease-out);
+}
+
+.skip-link:focus-visible { transform: translateY(0); text-decoration: none; }
+
+/* ── Selection ──────────────────────────────────────────── */
+::selection {
+  background: var(--color-selection-bg);
+  color: var(--color-selection-text);
+}
+
+/* ── Scrollbars (WebKit/Blink) ──────────────────────────── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-scrollbar) transparent;
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--color-scrollbar);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: var(--r-full);
+}
+::-webkit-scrollbar-thumb:hover { background-color: var(--color-scrollbar-hover); }
+
+/* ── Reduced motion ─────────────────────────────────────── */
+/* Honoured globally so no component has to remember to. Motion
+   is removed, not merely shortened, and animations are allowed
+   to finish once so anything that relies on an animationend
+   event still fires. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
+/* ── Print ──────────────────────────────────────────────── */
+/* Students and administrators do print result pages. */
+@media print {
+  /* Paper is white whatever the screen is set to. Printing the
+     dark theme would put a near-black page through the printer,
+     which most drivers render as a grey wash and which nobody
+     asked for; the roles are forced back to the light palette so
+     every component follows without a print rule of its own. */
+  :root, :root[data-theme="dark"] {
+    color-scheme: light;
+
+    --color-bg: #fff;
+    --color-surface: #fff;
+    --color-surface-secondary: #fff;
+    --color-surface-sunken: #f2f2f2;
+    --color-text: #000;
+    --color-text-strong: #000;
+    --color-text-muted: #333;
+    --color-text-subtle: #555;
+    --color-border: #999;
+    --color-border-subtle: #bbb;
+    --color-border-strong: #666;
+
+    --shadow-xs: none;
+    --shadow-sm: none;
+    --shadow-md: none;
+    --shadow-lg: none;
+    --shadow-xl: none;
+  }
+
+  .app-topbar, .app-sidebar, .app-footer, .no-print { display: none !important; }
+
+  body { background: #fff; }
+  .card, .table-card { box-shadow: none; border-color: #999; }
+  a[href]::after { content: ""; }
+}

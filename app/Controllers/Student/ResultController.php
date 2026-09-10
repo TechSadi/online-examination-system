@@ -56,10 +56,36 @@ final class ResultController
     {
         Auth::requireStudent();
 
+        $all = $this->results->historyForStudent(Auth::studentId());
+
+        // The filter narrows a list the student already has in hand, so it is
+        // applied here rather than as a second query. An unrecognised value
+        // falls back to showing everything: a mistyped URL should not look
+        // like an empty result history.
+        $filter = Request::query('filter');
+
+        if (!in_array($filter, ['passed', 'failed'], true)) {
+            $filter = 'all';
+        }
+
+        $visible = $filter === 'all' ? $all : array_values(array_filter(
+            $all,
+            static function (array $row) use ($filter): bool {
+                $passed = GradingService::isPass(
+                    GradingService::percentage((int) $row['score'], (int) $row['total'])
+                );
+
+                return $filter === 'passed' ? $passed : !$passed;
+            }
+        ));
+
         View::render('student/results', [
-            'pageTitle' => 'My Results',
-            'role'      => 'student',
-            'results'   => $this->results->historyForStudent(Auth::studentId()),
+            'pageTitle'  => 'My Results',
+            'role'       => 'student',
+            'results'    => $visible,
+            'allResults' => $all,
+            'filter'     => $filter,
+            'passMark'   => GradingService::passMark(),
         ]);
     }
 }

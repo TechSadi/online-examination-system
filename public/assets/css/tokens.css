@@ -1,0 +1,500 @@
+/* ============================================================
+   tokens.css — the single source of truth for design decisions
+   ------------------------------------------------------------
+   Nothing in this file draws anything. It only names values.
+   Every other stylesheet composes from these names, so a colour,
+   a rhythm step or a shadow is changed here once rather than
+   hunted through the pages that happen to use it.
+
+   Layers, in order:
+     1. Primitive scales  (--n-*, --b-*, --s-*, --d-*, --w-*)
+     2. Semantic roles    (--color-*)  — what the UI should ask for
+     3. Everything else   (type, space, radius, shadow, motion)
+
+   Rule of thumb: components reference layer 2 and below.
+   A component that reaches for a primitive scale is usually a
+   sign the palette is missing a role.
+
+   THEMING. The light palette is the complete one, declared on a
+   bare :root. Dark mode redefines layer 2 only - the roles, never
+   the scales - so a component that correctly asks for
+   --color-surface follows the theme and one that reached past it
+   for --n-0 would not. That is the whole enforcement mechanism,
+   and it is why the raw scales are not used outside this file
+   except where a value is deliberately the same in both themes
+   (white text on a saturated button, the always-dark hero panel).
+
+   The three-block pattern below is deliberate:
+     :root                            light, always defined
+     @media (prefers-color-scheme: dark) with :not([data-theme="light"])
+                                      system dark, unless overridden
+     :root[data-theme="dark"]         explicit choice wins either way
+   Without the :not() guard, a reader who chooses light on a
+   machine set to dark would get dark anyway.
+   ============================================================ */
+
+:root {
+  color-scheme: light;
+
+  /* ── 1. Primitive scales ────────────────────────────────── */
+
+  /* Neutral — very slightly cool, so surfaces read as paper
+     rather than as grey plastic. */
+  --n-0:   #ffffff;
+  --n-25:  #fcfdfe;
+  --n-50:  #f7f9fb;
+  --n-100: #eff2f6;
+  --n-150: #e6eaf0;
+  --n-200: #dce1e9;
+  --n-300: #c3cad6;
+  --n-400: #7b8698;
+  --n-500: #5f6879;
+  --n-600: #4d5768;
+  --n-700: #39424f;
+  --n-800: #252c37;
+  --n-900: #141922;
+
+  /* Brand — a cobalt blue. Serious without being institutional
+     navy; carries enough saturation to survive small type. */
+  --b-50:  #eff4ff;
+  --b-100: #dde7ff;
+  --b-200: #c2d3fe;
+  --b-300: #9bb5fc;
+  --b-400: #6e8ef7;
+  --b-500: #4a6bef;
+  --b-600: #3350e0;
+  --b-700: #2a3fc0;
+  --b-800: #26379a;
+  --b-900: #23327a;
+
+  --s-50:  #ecfdf3;  /* success */
+  --s-100: #d1fadf;
+  --s-200: #a6f0c6;
+  --s-500: #17b26a;
+  --s-600: #068149;
+  --s-700: #056b40;
+
+  --d-50:  #fef3f2;  /* danger */
+  --d-100: #fee4e2;
+  --d-200: #fecdca;
+  --d-500: #f04438;
+  --d-600: #d92d20;
+  --d-700: #b42318;
+
+  /* Dark-theme primitives. A separate scale rather than an
+     inversion of the neutrals above, because a dark interface is
+     not a light one turned upside down - see the notes at the
+     foot of this file. */
+  --dk-bg:            #0d1117;
+  --dk-surface:       #151a22;
+  --dk-surface-2:     #1b212b;
+  --dk-sunken:        #11161d;
+
+  --dk-text:          #dfe4ec;
+  --dk-text-strong:   #f3f6fa;
+  --dk-text-muted:    #9aa6b8;
+  --dk-text-subtle:   #6d7889;
+
+  --dk-border:        #262d39;
+  --dk-border-subtle: #1e242e;
+  --dk-border-strong: #5f6c80;
+  --dk-border-hover:  #7d8a9e;
+
+  --dk-primary:             #3f5ce6;
+  --dk-primary-hover:       #4f6bef;
+  --dk-primary-active:      #6280f2;
+  --dk-primary-text:        #a8bcfd;
+  --dk-primary-soft:        #161d33;
+  --dk-primary-soft-border: #28345c;
+
+  --dk-success:        #0a7d46;
+  --dk-success-hover:  #09713f;
+  --dk-success-text:   #5fd99a;
+  --dk-success-soft:   #0e2019;
+  --dk-success-border: #1d4433;
+
+  --dk-danger:        #d3342a;
+  --dk-danger-hover:  #c62c25;
+  --dk-danger-text:   #ff9b8f;
+  --dk-danger-soft:   #2a1512;
+  --dk-danger-border: #57231d;
+
+  --dk-warning:        #c47207;
+  --dk-warning-text:   #f3b757;
+  --dk-warning-soft:   #241a09;
+  --dk-warning-border: #4a3512;
+
+  --w-50:  #fffaeb;  /* warning */
+  --w-100: #fef0c7;
+  --w-200: #fedf89;
+  --w-500: #f79009;
+  --w-600: #dc6803;
+  --w-700: #b54708;
+
+  /* ── 2. Semantic roles ──────────────────────────────────── */
+  --color-bg:              var(--n-50);
+  --color-surface:         var(--n-0);
+  --color-surface-secondary: var(--n-50);
+  --color-surface-raised:  var(--n-0);
+  --color-surface-sunken:  var(--n-100);
+  --color-surface-inverse: var(--n-900);
+
+  --color-text:            var(--n-800);
+  --color-text-strong:     var(--n-900);
+  --color-text-muted:      var(--n-500);
+  --color-text-inverse:    var(--n-0);
+  --color-text-on-primary: var(--n-0);
+
+  /* Not a third grade of text. This is the colour for icons,
+     swatches and other graphics that sit beside a label, and it
+     is tuned to WCAG's 3:1 requirement for non-text contrast
+     rather than the 4.5:1 that body copy needs. Anything a
+     reader has to actually read uses --color-text-muted. */
+  --color-text-subtle:     var(--n-400);
+
+  --color-border:          var(--n-200);
+  --color-border-subtle:   var(--n-150);
+
+  /* The outline of a control the user can operate - a text field,
+     a secondary button, an answer option. WCAG 1.4.11 asks for
+     3:1 against the surface behind it, which a decorative hairline
+     does not reach; --color-border stays for dividers, which are
+     not interactive and are not held to it. */
+  --color-border-strong:   var(--n-400);
+
+  /* The border of a control under the pointer. A step past
+     --color-border-strong, and a role rather than a scale step so
+     it can move in the opposite direction in dark mode: there,
+     "more contrast" means lighter, not darker. */
+  --color-border-hover:    var(--n-500);
+
+  --color-primary:         var(--b-600);
+  --color-primary-hover:   var(--b-700);
+  --color-primary-active:  var(--b-800);
+  --color-primary-soft:    var(--b-50);
+  --color-primary-soft-border: var(--b-200);
+  --color-primary-text:    var(--b-700);
+
+  --color-success:         var(--s-600);
+  --color-success-hover:   var(--s-700);
+  --color-success-soft:    var(--s-50);
+  --color-success-border:  var(--s-200);
+  --color-success-text:    var(--s-700);
+
+  --color-warning:         var(--w-600);
+  --color-warning-soft:    var(--w-50);
+  --color-warning-border:  var(--w-200);
+  --color-warning-text:    var(--w-700);
+
+  --color-danger:          var(--d-600);
+  --color-danger-hover:    var(--d-700);
+  --color-danger-soft:     var(--d-50);
+  --color-danger-border:   var(--d-200);
+  --color-danger-text:     var(--d-700);
+
+  --color-info:            var(--b-600);
+  --color-info-soft:       var(--b-50);
+  --color-info-border:     var(--b-200);
+  --color-info-text:       var(--b-700);
+
+  --color-focus-ring:      color-mix(in srgb, var(--b-500) 45%, transparent);
+  --color-overlay:         color-mix(in srgb, var(--n-900) 55%, transparent);
+
+  /* Text selection, the scrollbar, and the row identifying the
+     signed-in reader. Small things, but each one is a colour that
+     has to invert with the theme rather than stay put. */
+  --color-selection-bg:    var(--b-100);
+  --color-selection-text:  var(--b-900);
+  --color-scrollbar:       var(--n-300);
+  --color-scrollbar-hover: var(--n-400);
+  --color-row-highlight:       var(--color-primary-soft);
+  --color-row-highlight-hover: var(--b-100);
+
+  /* ── 3a. Typography ─────────────────────────────────────── */
+  /* No webfont request: the system UI stack is already a well
+     drawn humanist sans on every target platform, and it paints
+     on the first frame instead of after a network round trip. */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text",
+               "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans",
+               sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+               "Liberation Mono", monospace;
+
+  --fs-2xs:  0.6875rem;  /* 11px — badges, table eyebrows      */
+  --fs-xs:   0.75rem;    /* 12px — captions, helper text       */
+  --fs-sm:   0.8125rem;  /* 13px — dense table cells, meta     */
+  --fs-md:   0.875rem;   /* 14px — secondary body, controls    */
+  --fs-base: 0.9375rem;  /* 15px — body                        */
+  --fs-lg:   1.0625rem;  /* 17px — lead paragraphs, h4         */
+  --fs-xl:   1.1875rem;  /* 19px — h3, question text           */
+  --fs-2xl:  1.5rem;     /* 24px — h2, section titles          */
+  --fs-3xl:  1.875rem;   /* 30px — h1                          */
+  --fs-display: clamp(2rem, 1.2rem + 3.2vw, 2.875rem);
+
+  --lh-none:    1;
+  --lh-tight:   1.2;
+  --lh-snug:    1.35;
+  --lh-normal:  1.55;
+  --lh-relaxed: 1.7;
+
+  --fw-regular:  400;
+  --fw-medium:   500;
+  --fw-semibold: 600;
+  --fw-bold:     700;
+
+  --ls-tighter: -0.022em;
+  --ls-tight:   -0.014em;
+  --ls-normal:  0;
+  --ls-wide:    0.04em;
+  --ls-wider:   0.08em;
+
+  /* ── 3b. Spacing — 4px base ─────────────────────────────── */
+  --sp-1:  0.25rem;
+  --sp-2:  0.5rem;
+  --sp-3:  0.75rem;
+  --sp-4:  1rem;
+  --sp-5:  1.25rem;
+  --sp-6:  1.5rem;
+  --sp-7:  1.75rem;
+  --sp-8:  2rem;
+  --sp-10: 2.5rem;
+  --sp-12: 3rem;
+  --sp-16: 4rem;
+  --sp-20: 5rem;
+  --sp-24: 6rem;
+
+  /* ── 3c. Radii ──────────────────────────────────────────── */
+  --r-xs:   4px;
+  --r-sm:   6px;
+  --r-md:   8px;
+  --r-lg:   12px;
+  --r-xl:   16px;
+  --r-2xl:  20px;
+  --r-full: 999px;
+
+  /* ── 3d. Elevation ──────────────────────────────────────── */
+  /* Two-part shadows: a tight contact shadow plus a wider,
+     softer one. A single large blur reads as a glow. */
+  /* The tint is a channel triplet so the alphas below stay
+     readable and dark mode can swap the colour without restating
+     every offset. Shadows carry more of the elevation in dark
+     mode, where there is no bright ground for a card to lift off,
+     so the alphas there are roughly tripled. */
+  --shadow-color: 20 25 34;
+
+  --shadow-xs: 0 1px 2px rgb(var(--shadow-color) / .05);
+  --shadow-sm: 0 1px 3px rgb(var(--shadow-color) / .07), 0 1px 2px rgb(var(--shadow-color) / .04);
+  --shadow-md: 0 4px 8px -2px rgb(var(--shadow-color) / .08), 0 2px 4px -2px rgb(var(--shadow-color) / .05);
+  --shadow-lg: 0 12px 16px -4px rgb(var(--shadow-color) / .08), 0 4px 6px -2px rgb(var(--shadow-color) / .04);
+  --shadow-xl: 0 20px 24px -4px rgb(var(--shadow-color) / .10), 0 8px 8px -4px rgb(var(--shadow-color) / .04);
+
+  /* ── 3e. Motion ─────────────────────────────────────────── */
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
+  --dur-slow: 280ms;
+  --ease-out:    cubic-bezier(.22, 1, .36, 1);
+  --ease-in-out: cubic-bezier(.4, 0, .2, 1);
+
+  /* ── 3f. Layering ───────────────────────────────────────── */
+  --z-base:    1;
+  --z-sticky:  100;
+  --z-header:  200;
+  --z-drawer:  300;
+  --z-overlay: 400;
+  --z-modal:   500;
+  --z-toast:   600;
+
+  /* ── 3g. Layout constants ───────────────────────────────── */
+  --topbar-h:        60px;
+  --sidebar-w:       248px;
+  --container:       1200px;
+  --container-wide:  1360px;
+  --container-narrow: 720px;
+  --container-form:  560px;
+  --gutter:          var(--sp-6);
+
+  /* Minimum comfortable tap target (WCAG 2.5.5 target size). */
+  --tap-min: 44px;
+}
+
+@media (max-width: 640px) {
+  :root { --gutter: var(--sp-4); }
+}
+
+/* ============================================================
+   Dark theme
+   ------------------------------------------------------------
+   Roles only. Nothing below redefines a primitive scale, so a
+   component that asked for --color-surface follows the theme,
+   while one that deliberately asked for --n-0 (white text on a
+   saturated button, the always-dark hero panel) stays put.
+
+   It is not the light palette inverted. A dark interface needs
+   its own decisions:
+
+   - Surfaces are near-black with a blue cast rather than pure
+     #000, which makes shadows invisible and text edges harsh.
+   - The lift from page to card is slight; separation comes
+     mostly from the border. That is how dark interfaces stay
+     calm instead of looking like a stack of floating panels.
+   - Solid fills go DARKER, not lighter, because they still carry
+     white text and have to clear 4.5:1 to do it. Text and icon
+     colours go lighter for the same reason. This is the step
+     that a naive inversion gets backwards.
+   - Soft tints become near-black mixes of their hue. The pale
+     washes used in light mode would glow here.
+   - Shadows do more work, because there is no bright ground for
+     a card to lift off, so their alphas are roughly tripled.
+
+   Every pair was measured rather than judged by eye: all text
+   meets WCAG AA 4.5:1 against the surfaces it appears on, and
+   every operable control's outline meets 1.4.11's 3:1.
+
+   On the duplication below: the two selectors cannot be combined,
+   because one of them only exists inside a media query. The
+   values themselves are declared once as the --dk-* scale and
+   both blocks merely map them onto roles, so there is one place
+   to change a colour and the repetition is mechanical.
+   ============================================================ */
+
+@media (prefers-color-scheme: dark) {
+  /* The system's preference - unless the reader has explicitly
+     asked for light. Without the :not() guard, choosing light on
+     a machine set to dark would silently hand back dark. */
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --color-bg:                var(--dk-bg);
+    --color-surface:           var(--dk-surface);
+    --color-surface-secondary: var(--dk-surface-2);
+    --color-surface-raised:    var(--dk-surface-2);
+    --color-surface-sunken:    var(--dk-sunken);
+    --color-surface-inverse:   var(--dk-surface-2);
+
+    --color-text:            var(--dk-text);
+    --color-text-strong:     var(--dk-text-strong);
+    --color-text-muted:      var(--dk-text-muted);
+    --color-text-subtle:     var(--dk-text-subtle);
+    --color-text-inverse:    var(--dk-bg);
+
+    --color-border:          var(--dk-border);
+    --color-border-subtle:   var(--dk-border-subtle);
+    --color-border-strong:   var(--dk-border-strong);
+    --color-border-hover:    var(--dk-border-hover);
+
+    --color-primary:             var(--dk-primary);
+    --color-primary-hover:       var(--dk-primary-hover);
+    --color-primary-active:      var(--dk-primary-active);
+    --color-primary-soft:        var(--dk-primary-soft);
+    --color-primary-soft-border: var(--dk-primary-soft-border);
+    --color-primary-text:        var(--dk-primary-text);
+
+    --color-success:         var(--dk-success);
+    --color-success-hover:   var(--dk-success-hover);
+    --color-success-soft:    var(--dk-success-soft);
+    --color-success-border:  var(--dk-success-border);
+    --color-success-text:    var(--dk-success-text);
+
+    --color-warning:         var(--dk-warning);
+    --color-warning-soft:    var(--dk-warning-soft);
+    --color-warning-border:  var(--dk-warning-border);
+    --color-warning-text:    var(--dk-warning-text);
+
+    --color-danger:          var(--dk-danger);
+    --color-danger-hover:    var(--dk-danger-hover);
+    --color-danger-soft:     var(--dk-danger-soft);
+    --color-danger-border:   var(--dk-danger-border);
+    --color-danger-text:     var(--dk-danger-text);
+
+    --color-info:            var(--dk-primary);
+    --color-info-soft:       var(--dk-primary-soft);
+    --color-info-border:     var(--dk-primary-soft-border);
+    --color-info-text:       var(--dk-primary-text);
+
+    --color-focus-ring: color-mix(in srgb, var(--dk-primary-hover) 55%, transparent);
+    --color-overlay:    rgba(4, 6, 10, .68);
+
+    --color-selection-bg:        var(--dk-primary-soft-border);
+    --color-selection-text:      var(--dk-text-strong);
+    --color-scrollbar:           var(--dk-border-strong);
+    --color-scrollbar-hover:     var(--dk-border-hover);
+    --color-row-highlight:       var(--dk-primary-soft);
+    --color-row-highlight-hover: var(--dk-primary-soft-border);
+
+    --shadow-color: 0 0 0;
+    --shadow-xs: 0 1px 2px rgb(var(--shadow-color) / .30);
+    --shadow-sm: 0 1px 3px rgb(var(--shadow-color) / .38), 0 1px 2px rgb(var(--shadow-color) / .26);
+    --shadow-md: 0 4px 8px -2px rgb(var(--shadow-color) / .42), 0 2px 4px -2px rgb(var(--shadow-color) / .30);
+    --shadow-lg: 0 12px 16px -4px rgb(var(--shadow-color) / .46), 0 4px 6px -2px rgb(var(--shadow-color) / .30);
+    --shadow-xl: 0 20px 24px -4px rgb(var(--shadow-color) / .55), 0 8px 8px -4px rgb(var(--shadow-color) / .32);
+  }
+}
+
+/* An explicit choice of dark, which wins whatever the system says. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-bg:                var(--dk-bg);
+  --color-surface:           var(--dk-surface);
+  --color-surface-secondary: var(--dk-surface-2);
+  --color-surface-raised:    var(--dk-surface-2);
+  --color-surface-sunken:    var(--dk-sunken);
+  --color-surface-inverse:   var(--dk-surface-2);
+
+  --color-text:            var(--dk-text);
+  --color-text-strong:     var(--dk-text-strong);
+  --color-text-muted:      var(--dk-text-muted);
+  --color-text-subtle:     var(--dk-text-subtle);
+  --color-text-inverse:    var(--dk-bg);
+
+  --color-border:          var(--dk-border);
+  --color-border-subtle:   var(--dk-border-subtle);
+  --color-border-strong:   var(--dk-border-strong);
+  --color-border-hover:    var(--dk-border-hover);
+
+  --color-primary:             var(--dk-primary);
+  --color-primary-hover:       var(--dk-primary-hover);
+  --color-primary-active:      var(--dk-primary-active);
+  --color-primary-soft:        var(--dk-primary-soft);
+  --color-primary-soft-border: var(--dk-primary-soft-border);
+  --color-primary-text:        var(--dk-primary-text);
+
+  --color-success:         var(--dk-success);
+  --color-success-hover:   var(--dk-success-hover);
+  --color-success-soft:    var(--dk-success-soft);
+  --color-success-border:  var(--dk-success-border);
+  --color-success-text:    var(--dk-success-text);
+
+  --color-warning:         var(--dk-warning);
+  --color-warning-soft:    var(--dk-warning-soft);
+  --color-warning-border:  var(--dk-warning-border);
+  --color-warning-text:    var(--dk-warning-text);
+
+  --color-danger:          var(--dk-danger);
+  --color-danger-hover:    var(--dk-danger-hover);
+  --color-danger-soft:     var(--dk-danger-soft);
+  --color-danger-border:   var(--dk-danger-border);
+  --color-danger-text:     var(--dk-danger-text);
+
+  --color-info:            var(--dk-primary);
+  --color-info-soft:       var(--dk-primary-soft);
+  --color-info-border:     var(--dk-primary-soft-border);
+  --color-info-text:       var(--dk-primary-text);
+
+  --color-focus-ring: color-mix(in srgb, var(--dk-primary-hover) 55%, transparent);
+  --color-overlay:    rgba(4, 6, 10, .68);
+
+  --color-selection-bg:        var(--dk-primary-soft-border);
+  --color-selection-text:      var(--dk-text-strong);
+  --color-scrollbar:           var(--dk-border-strong);
+  --color-scrollbar-hover:     var(--dk-border-hover);
+  --color-row-highlight:       var(--dk-primary-soft);
+  --color-row-highlight-hover: var(--dk-primary-soft-border);
+
+  --shadow-color: 0 0 0;
+  --shadow-xs: 0 1px 2px rgb(var(--shadow-color) / .30);
+  --shadow-sm: 0 1px 3px rgb(var(--shadow-color) / .38), 0 1px 2px rgb(var(--shadow-color) / .26);
+  --shadow-md: 0 4px 8px -2px rgb(var(--shadow-color) / .42), 0 2px 4px -2px rgb(var(--shadow-color) / .30);
+  --shadow-lg: 0 12px 16px -4px rgb(var(--shadow-color) / .46), 0 4px 6px -2px rgb(var(--shadow-color) / .30);
+  --shadow-xl: 0 20px 24px -4px rgb(var(--shadow-color) / .55), 0 8px 8px -4px rgb(var(--shadow-color) / .32);
+}

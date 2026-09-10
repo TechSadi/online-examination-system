@@ -38,7 +38,7 @@ final class AuthController
 
         View::render('admin/login', [
             'pageTitle' => 'Admin Login',
-            'role'      => 'public',
+            'role'      => 'auth',
         ]);
     }
 
@@ -171,7 +171,7 @@ final class AuthController
     {
         View::render('admin/login', [
             'pageTitle' => 'Admin Login',
-            'role'      => 'public',
+            'role'      => 'auth',
             'errors'    => $errors,
             'old'       => ['identifier' => $identifier],
         ]);

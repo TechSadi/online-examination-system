@@ -1,67 +1,138 @@
 <?php
 /**
- * Student accounts with activity summary.
+ * Student accounts with an activity summary.
  *
- * @var list<array<string,mixed>> $students
+ * @var list<array<string,mixed>> $students  one page of rows
+ * @var string                    $search
+ * @var \App\Core\Sorter          $sort
+ * @var \App\Core\Paginator       $paginator
  */
+$path       = '/admin/students.php';
+$isSearch   = $search !== '';
+$sortHeader = static function (string $key, string $label) use ($sort, $path): void {
+    \App\Core\View::partial('partials/sort_header', [
+        'sort' => $sort, 'key' => $key, 'label' => $label, 'path' => $path,
+    ]);
+};
 ?>
-<div class="page-heading">
-  <h2>Manage Students</h2>
-  <p class="text-muted"><?= count($students) ?> registered student(s)</p>
+<div class="page-head">
+  <div class="page-head-text">
+    <h1 class="page-title">Students</h1>
+    <p class="page-subtitle">Registered accounts and how each one is performing.</p>
+  </div>
 </div>
 
-<?php if ($students === []): ?>
-  <div class="empty-state">
-    <div class="icon">&#128100;</div>
-    <p>No students registered yet.</p>
-  </div>
-<?php else: ?>
-  <div class="table-wrapper">
-    <table>
-      <thead>
-        <tr>
-          <th>#</th><th>Name</th><th>Email</th><th>Exams Taken</th>
-          <th>Avg Score</th><th>Registered</th><th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <?php foreach ($students as $i => $student):
-            $attempts = (int) $student['attempts'];
-            $average  = $student['avg_score'];
-        ?>
+<div class="table-card">
+  <form class="table-toolbar" method="GET" action="<?= e(url($path)) ?>">
+    <?php /* The sort survives a search, and a new search returns to page one. */ ?>
+    <input type="hidden" name="sort" value="<?= e($sort->key) ?>">
+    <input type="hidden" name="dir" value="<?= e($sort->direction) ?>">
+
+    <div class="field">
+      <label class="field-label" for="q">Search</label>
+      <span class="field-affix">
+        <?= icon('search') ?>
+        <input type="search" id="q" name="q" class="field-input"
+               placeholder="Name or email" value="<?= e($search) ?>">
+      </span>
+    </div>
+
+    <div class="btn-row">
+      <button type="submit" class="btn btn-secondary">Search</button>
+      <?php if ($isSearch): ?>
+        <a class="btn btn-ghost" href="<?= e(url($path)) ?>"><?= icon('x') ?> Clear</a>
+      <?php endif; ?>
+    </div>
+  </form>
+
+  <?php if ($students === []): ?>
+    <div class="empty">
+      <div class="empty-icon"><?= icon($isSearch ? 'search' : 'students') ?></div>
+      <?php if ($isSearch): ?>
+        <p class="empty-title">No students match &ldquo;<?= e($search) ?>&rdquo;</p>
+        <p class="empty-text">Check the spelling, or search for part of an email address instead.</p>
+        <div class="empty-actions">
+          <a class="btn btn-secondary" href="<?= e(url($path)) ?>">Show all students</a>
+        </div>
+      <?php else: ?>
+        <p class="empty-title">No students have registered yet</p>
+        <p class="empty-text">
+          Students create their own accounts from the sign-up page. Once they do,
+          they will be listed here with their results.
+        </p>
+      <?php endif; ?>
+    </div>
+  <?php else: ?>
+    <div class="table-scroll">
+      <table class="table table-stack">
+        <thead>
           <tr>
-            <td><?= $i + 1 ?></td>
-            <td><strong><?= e($student['name']) ?></strong></td>
-            <td><?= e($student['email']) ?></td>
-            <td>
-              <span class="badge <?= $attempts > 0 ? 'badge-success' : 'badge-warning' ?>"><?= $attempts ?></span>
-            </td>
-            <td>
-              <?php if ($average !== null): ?>
-                <span class="badge <?= e(score_badge((int) round((float) $average))) ?>">
-                  <?= e((string) $average) ?>%
-                </span>
-              <?php else: ?>
-                <span class="text-muted">&mdash;</span>
-              <?php endif; ?>
-            </td>
-            <td class="text-muted"><?= e(format_date($student['created_at'])) ?></td>
-            <td class="cell-actions">
-              <a href="<?= e(url('/admin/results.php?student_id=' . (int) $student['student_id'])) ?>"
-                 class="btn btn-sm btn-primary">&#128202; Results</a>
-              <form method="POST" action="<?= e(url('/admin/students.php')) ?>" class="inline-form">
-                <?= csrf_field() ?>
-                <input type="hidden" name="action" value="delete">
-                <input type="hidden" name="student_id" value="<?= (int) $student['student_id'] ?>">
-                <button type="submit" class="btn btn-sm btn-danger"
-                        data-confirm="Delete student &quot;<?= e($student['name']) ?>&quot; and all their data?">
-                  &#128465; Delete
-                </button>
-              </form>
-            </td>
+            <?php $sortHeader('name', 'Name'); ?>
+            <?php $sortHeader('email', 'Email'); ?>
+            <?php $sortHeader('attempts', 'Exams taken'); ?>
+            <?php $sortHeader('avg_score', 'Average'); ?>
+            <?php $sortHeader('created_at', 'Registered'); ?>
+            <th scope="col"><span class="sr-only">Actions</span></th>
           </tr>
-        <?php endforeach; ?>
-      </tbody>
-    </table>
-  </div>
-<?php endif; ?>
+        </thead>
+        <tbody>
+          <?php foreach ($students as $student):
+              $studentId = (int) $student['student_id'];
+              $attempts  = (int) $student['attempts'];
+              $average   = $student['avg_score'];
+          ?>
+            <tr>
+              <td data-label="Name" class="cell-primary cell-lead"><?= e($student['name']) ?></td>
+              <td data-label="Email" class="cell-muted"><?= e($student['email']) ?></td>
+              <td data-label="Exams taken"><?= $attempts ?></td>
+              <td data-label="Average">
+                <?php if ($average === null): ?>
+                  <span class="text-muted">&mdash;</span>
+                <?php else:
+                    $pct    = (int) round((float) $average);
+                    $passed = is_pass($pct);
+                ?>
+                  <div class="meter">
+                    <div class="progress <?= $passed ? 'progress-success' : 'progress-danger' ?>">
+                      <div class="progress-bar" style="width:<?= $pct ?>%"></div>
+                    </div>
+                    <span class="meter-value"><?= $pct ?>%</span>
+                  </div>
+                <?php endif; ?>
+              </td>
+              <td data-label="Registered" class="cell-muted"><?= e(format_date($student['created_at'])) ?></td>
+              <td class="cell-actions" data-label="">
+                <div class="btn-row">
+                  <a class="btn btn-secondary btn-sm"
+                     href="<?= e(url('/admin/results.php?student_id=' . $studentId)) ?>">
+                    <?= icon('results') ?> Results
+                  </a>
+                  <form method="POST" action="<?= e(url($path)) ?>" class="inline-form">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="student_id" value="<?= $studentId ?>">
+                    <button type="submit" class="btn btn-danger-ghost btn-sm btn-icon"
+                            aria-label="Delete <?= e($student['name']) ?>"
+                            data-confirm-title="Delete this student account?"
+                            data-confirm="<?= e(sprintf(
+                                '%s will be removed along with %s. This cannot be undone.',
+                                $student['name'],
+                                $attempts > 0 ? pluralise($attempts, 'recorded result') : 'their account data'
+                            )) ?>"
+                            data-confirm-label="Delete student">
+                      <?= icon('trash') ?>
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+
+    <?php \App\Core\View::partial('partials/pagination', [
+        'paginator' => $paginator, 'path' => $path, 'noun' => 'student',
+    ]); ?>
+  <?php endif; ?>
+</div>
