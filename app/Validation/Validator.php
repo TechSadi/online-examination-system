@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Validation;
 
+use App\Core\Config;
+use App\Services\AuthService;
+
 /**
  * Small fluent validator.
  *
@@ -81,6 +84,43 @@ final class Validator
 
         if ($a !== $b) {
             $this->errors[] = $message;
+        }
+
+        return $this;
+    }
+
+    /**
+     * Password policy, applied to the raw value.
+     *
+     * value() trims, which is right for a name and wrong for a password: a
+     * password is whatever was typed, spaces included, so the length checked
+     * here must be the length that will actually be hashed.
+     *
+     * The upper bound is not arbitrary. bcrypt reads only the first 72 bytes
+     * and silently ignores the rest, so accepting a longer passphrase would
+     * mean quietly hashing something other than what the user chose - and two
+     * different passphrases sharing a prefix would open the same account.
+     * Measured in bytes, not characters, since a multi-byte character can
+     * cost four of the 72.
+     */
+    public function password(string $field, string $label = 'Password'): self
+    {
+        $value  = (string) ($this->data[$field] ?? '');
+        $min    = max(1, (int) Config::get('security.password_min_length', 8));
+        $length = strlen($value);
+
+        if (mb_strlen($value) < $min) {
+            $this->errors[] = sprintf('%s must be at least %d characters.', $label, $min);
+
+            return $this;
+        }
+
+        if ($length > AuthService::MAX_PASSWORD_BYTES) {
+            $this->errors[] = sprintf(
+                '%s cannot exceed %d bytes. Please choose a shorter one.',
+                $label,
+                AuthService::MAX_PASSWORD_BYTES
+            );
         }
 
         return $this;
