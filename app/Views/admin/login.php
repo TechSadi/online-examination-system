@@ -17,6 +17,7 @@
       <?php \App\Core\View::partial('partials/alerts', ['flashes' => $flashes, 'errors' => $errors]); ?>
 
       <form method="POST" novalidate>
+        <?= csrf_field() ?>
         <div class="form-group">
           <label for="identifier">Username or Email</label>
           <input type="text" id="identifier" name="identifier" class="form-control"

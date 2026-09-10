@@ -18,7 +18,12 @@ Options -Indexes
   Require all denied
 </FilesMatch>
 
-RedirectMatch 404 ^/.*/(app|database|storage)/.*$
+# The optional leading group matters: without it the pattern needed a
+# directory component before "app", so it matched
+# /online-exam-system/app/... under XAMPP but not /app/... when the project
+# is served from a virtual-host root. Each of those directories also carries
+# its own "Require all denied", so this is the outer of two layers.
+RedirectMatch 404 ^/(.*/)?(app|database|storage)/
 
 # Default document.
 DirectoryIndex index.php

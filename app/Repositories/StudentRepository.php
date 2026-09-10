@@ -42,6 +42,12 @@ final class StudentRepository
         );
     }
 
+    /** Replace a stored hash, used when a sign-in triggers a rehash. */
+    public function updatePassword(int $id, string $passwordHash): void
+    {
+        Database::execute('UPDATE students SET password = ? WHERE student_id = ?', [$passwordHash, $id]);
+    }
+
     public function delete(int $id): bool
     {
         return Database::execute('DELETE FROM students WHERE student_id = ?', [$id]) > 0;

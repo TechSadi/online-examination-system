@@ -23,6 +23,7 @@ $value  = static fn (string $key, mixed $fallback = '') => (string) ($old[$key] 
   </div>
   <div class="card-body">
     <form method="POST" novalidate>
+      <?= csrf_field() ?>
       <?php if ($isEdit): ?>
         <input type="hidden" name="exam_id" value="<?= (int) $exam['exam_id'] ?>">
       <?php endif; ?>

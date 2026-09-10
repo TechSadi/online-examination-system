@@ -44,6 +44,7 @@
               <span class="text-muted text-sm">&mdash; current session &mdash;</span>
             <?php else: ?>
               <form method="POST" action="<?= e(url('/admin/admins.php')) ?>" class="inline-form">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="delete">
                 <input type="hidden" name="admin_id" value="<?= (int) $admin['admin_id'] ?>">
                 <button type="submit" class="btn btn-sm btn-danger"

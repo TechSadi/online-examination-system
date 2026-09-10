@@ -14,8 +14,10 @@ declare(strict_types=1);
  */
 
 use App\Core\Config;
+use App\Core\Csrf;
 use App\Core\Env;
 use App\Core\ErrorHandler;
+use App\Core\Security;
 use App\Core\Session;
 
 if (defined('APP_BOOTSTRAPPED')) {
@@ -55,5 +57,17 @@ date_default_timezone_set('UTC');
 /* ── Session ─────────────────────────────────────────────── */
 Session::start();
 
-/* ── View helpers (e(), url(), asset(), ...) ─────────────── */
+/* ── Response headers ────────────────────────────────────────
+   Sent before any controller runs, so every page carries them - including
+   the error pages, which are rendered from the exception handler.       */
+Security::sendHeaders();
+
+/* ── CSRF ────────────────────────────────────────────────────
+   Enforced here rather than per controller. Every entry point in admin/,
+   student/ and index.php passes through this file, so a state-changing
+   request cannot reach a controller without a valid token and a new form
+   cannot forget to opt in.                                              */
+Csrf::guard();
+
+/* ── View helpers (e(), url(), asset(), csrf_field(), ...) ── */
 require __DIR__ . '/Helpers/functions.php';

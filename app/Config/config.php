@@ -15,6 +15,10 @@ return [
         'debug' => (bool) Env::get('APP_DEBUG', false),
         // Empty => URLs are generated relative to the document root.
         'url'   => rtrim((string) Env::get('APP_URL', ''), '/'),
+        // Only enable behind a reverse proxy that sets X-Forwarded-Proto and
+        // strips any copy the client sent. Otherwise a client could assert
+        // its own connection was secure.
+        'trust_proxy' => (bool) Env::get('APP_TRUST_PROXY', false),
     ],
 
     'db' => [
@@ -30,11 +34,31 @@ return [
         'name'   => (string) Env::get('SESSION_NAME', 'examhub_session'),
         'secret' => (string) Env::get('SESSION_SECRET', ''),
         'secure' => (bool) Env::get('SESSION_SECURE', false),
+        // Sign out after this long without a request.
+        'idle_timeout'     => (int) Env::get('SESSION_IDLE_TIMEOUT', 1800),
+        // Hard ceiling on a session's life, however active it is.
+        'absolute_timeout' => (int) Env::get('SESSION_ABSOLUTE_TIMEOUT', 28800),
+    ],
+
+    'security' => [
+        // bcrypt work factor. 12 is roughly 250ms on current hardware:
+        // costly to attack offline, unnoticeable on a sign-in.
+        'bcrypt_cost'         => (int) Env::get('BCRYPT_COST', 12),
+        'password_min_length' => (int) Env::get('PASSWORD_MIN_LENGTH', 8),
+        // Failed sign-ins allowed per identifier before a lockout.
+        'login_max_attempts'  => (int) Env::get('LOGIN_MAX_ATTEMPTS', 5),
+        // How long the window and the resulting lockout last, in seconds.
+        'login_decay'         => (int) Env::get('LOGIN_DECAY', 900),
     ],
 
     'exam' => [
         'pass_mark'    => (int) Env::get('EXAM_PASS_MARK', 60),
         'max_duration' => (int) Env::get('EXAM_MAX_DURATION', 300),
+        // Seconds a submission may arrive after the deadline and still count.
+        // The client auto-submits at zero, so the request is already in
+        // flight as time runs out; without this a slow connection would cost
+        // a student their paper. Beyond it, the attempt is recorded expired.
+        'submit_grace' => (int) Env::get('EXAM_SUBMIT_GRACE', 60),
     ],
 
     'paths' => [

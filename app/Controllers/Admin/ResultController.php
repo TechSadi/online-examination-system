@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers\Admin;
 
 use App\Core\Request;
+use App\Core\Response;
 use App\Core\View;
 use App\Middleware\Auth;
 use App\Repositories\ExamRepository;
@@ -26,6 +27,14 @@ final class ResultController
     public function index(): void
     {
         Auth::requireAdmin();
+
+        // A filter that is present but malformed is refused rather than
+        // treated as "no filter": silently showing every result for a request
+        // that asked for one student's is the kind of quiet substitution that
+        // hides a bug, and here it would widen what is on screen.
+        if (Request::hasInvalidId('student_id') || Request::hasInvalidId('exam_id')) {
+            Response::redirectWithError('/admin/results.php', 'That filter was not valid.');
+        }
 
         $studentId = Request::id('student_id');
         $examId    = Request::id('exam_id');

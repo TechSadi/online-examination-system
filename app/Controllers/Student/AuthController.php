@@ -10,6 +10,7 @@ use App\Core\View;
 use App\Middleware\Auth;
 use App\Repositories\StudentRepository;
 use App\Services\AuthService;
+use App\Services\LoginThrottle;
 use App\Validation\Validator;
 
 /**
@@ -17,9 +18,12 @@ use App\Validation\Validator;
  */
 final class AuthController
 {
+    private const ROLE = 'student';
+
     public function __construct(
         private readonly AuthService $auth = new AuthService(),
-        private readonly StudentRepository $students = new StudentRepository()
+        private readonly StudentRepository $students = new StudentRepository(),
+        private readonly LoginThrottle $throttle = new LoginThrottle()
     ) {
     }
 
@@ -46,14 +50,32 @@ final class AuthController
             return;
         }
 
+        $ip   = LoginThrottle::clientIp();
+        $wait = $this->throttle->secondsUntilRetry(self::ROLE, $email, $ip);
+
+        // Checked before the password is verified, so a locked-out attacker
+        // gets no signal at all - not even the timing of a hash comparison.
+        if ($wait > 0) {
+            $this->renderLogin([sprintf(
+                'Too many failed sign-in attempts. Please try again in %s.',
+                LoginThrottle::describeWait($wait)
+            )], $email);
+
+            return;
+        }
+
         $student = $this->auth->attemptStudent($email, $password);
 
         if ($student === null) {
+            $this->throttle->recordFailure(self::ROLE, $email, $ip);
+
             // One message for both causes: never reveal whether the address exists.
             $this->renderLogin(['Invalid email or password. Please try again.'], $email);
 
             return;
         }
+
+        $this->throttle->clear(self::ROLE, $email);
 
         Auth::loginStudent($student);
         Response::redirect('/student/dashboard.php');
@@ -85,7 +107,7 @@ final class AuthController
             ->maxLength('name', 100, 'Full name')
             ->email('email', 'A valid email address')
             ->maxLength('email', 150, 'Email address')
-            ->minLength('password', 6, 'Password')
+            ->password('password')
             ->matches('password', 'confirm', 'Passwords do not match.');
 
         if ($validator->passes() && $this->students->emailExists($input['email'])) {
@@ -111,8 +133,19 @@ final class AuthController
         );
     }
 
+    /**
+     * Sign out.
+     *
+     * POST only. The CSRF guard lets safe methods through untouched, so a
+     * GET here would still sign the user out - and any third-party page
+     * could trigger it with an image tag.
+     */
     public function logout(): void
     {
+        if (!Request::isPost()) {
+            Response::redirect('/student/login.php');
+        }
+
         Auth::logoutStudent();
         Response::redirect('/student/login.php');
     }

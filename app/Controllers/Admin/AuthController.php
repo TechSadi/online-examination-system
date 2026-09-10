@@ -10,6 +10,7 @@ use App\Core\View;
 use App\Middleware\Auth;
 use App\Repositories\AdminRepository;
 use App\Services\AuthService;
+use App\Services\LoginThrottle;
 use App\Validation\Validator;
 
 /**
@@ -22,9 +23,12 @@ use App\Validation\Validator;
  */
 final class AuthController
 {
+    private const ROLE = 'admin';
+
     public function __construct(
         private readonly AuthService $auth = new AuthService(),
-        private readonly AdminRepository $admins = new AdminRepository()
+        private readonly AdminRepository $admins = new AdminRepository(),
+        private readonly LoginThrottle $throttle = new LoginThrottle()
     ) {
     }
 
@@ -51,13 +55,30 @@ final class AuthController
             return;
         }
 
+        $ip   = LoginThrottle::clientIp();
+        $wait = $this->throttle->secondsUntilRetry(self::ROLE, $identifier, $ip);
+
+        // Checked before the password is verified, so a locked-out attacker
+        // gets no signal at all - not even the timing of a hash comparison.
+        if ($wait > 0) {
+            $this->renderLogin([sprintf(
+                'Too many failed sign-in attempts. Please try again in %s.',
+                LoginThrottle::describeWait($wait)
+            )], $identifier);
+
+            return;
+        }
+
         $admin = $this->auth->attemptAdmin($identifier, $password);
 
         if ($admin === null) {
+            $this->throttle->recordFailure(self::ROLE, $identifier, $ip);
             $this->renderLogin(['Invalid username / email or password.'], $identifier);
 
             return;
         }
+
+        $this->throttle->clear(self::ROLE, $identifier);
 
         Auth::loginAdmin($admin);
         Response::redirect('/admin/dashboard.php');
@@ -93,7 +114,7 @@ final class AuthController
             ->username('username')
             ->email('email', 'A valid email address')
             ->maxLength('email', 150, 'Email address')
-            ->minLength('password', 6, 'Password')
+            ->password('password')
             ->matches('password', 'confirm', 'Passwords do not match.');
 
         if ($validator->passes() && $this->admins->identifierExists($input['username'], $input['email'])) {
@@ -128,8 +149,19 @@ final class AuthController
         );
     }
 
+    /**
+     * Sign out.
+     *
+     * POST only. The CSRF guard lets safe methods through untouched, so a
+     * GET here would still sign the user out - and any third-party page
+     * could trigger it with an image tag.
+     */
     public function logout(): void
     {
+        if (!Request::isPost()) {
+            Response::redirect('/admin/login.php');
+        }
+
         Auth::logoutAdmin();
         Response::redirect('/admin/login.php');
     }

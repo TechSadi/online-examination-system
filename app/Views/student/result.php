@@ -17,6 +17,13 @@
   <div class="result-column">
     <?php \App\Core\View::partial('partials/alerts', ['flashes' => $flashes, 'errors' => $errors]); ?>
 
+    <?php if (($result['status'] ?? '') === 'expired'): ?>
+      <div class="alert alert-warning mb-2" role="status">
+        &#9201; <strong>This attempt expired.</strong> It was not handed in before
+        the exam time ran out, so it was recorded with a score of zero.
+      </div>
+    <?php endif; ?>
+
     <div class="card">
       <div class="card-body">
         <div class="result-hero">

@@ -50,6 +50,7 @@
               <a href="<?= e(url('/admin/results.php?student_id=' . (int) $student['student_id'])) ?>"
                  class="btn btn-sm btn-primary">&#128202; Results</a>
               <form method="POST" action="<?= e(url('/admin/students.php')) ?>" class="inline-form">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="delete">
                 <input type="hidden" name="student_id" value="<?= (int) $student['student_id'] ?>">
                 <button type="submit" class="btn btn-sm btn-danger"

@@ -144,6 +144,21 @@ wins in production.
 
 ---
 
+### Security-related variables
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `SESSION_IDLE_TIMEOUT` | `1800` | Seconds of inactivity before sign-out |
+| `SESSION_ABSOLUTE_TIMEOUT` | `28800` | Hard ceiling on a session's life |
+| `BCRYPT_COST` | `12` | Password hashing work factor; raise as hardware improves |
+| `PASSWORD_MIN_LENGTH` | `8` | Minimum accepted at registration |
+| `LOGIN_MAX_ATTEMPTS` | `5` | Failed sign-ins per identifier before lockout |
+| `LOGIN_DECAY` | `900` | Length of both the counting window and the lockout |
+| `EXAM_SUBMIT_GRACE` | `60` | Seconds a submission may arrive late and still count |
+| `APP_TRUST_PROXY` | `false` | Honour `X-Forwarded-Proto`; enable **only** behind a proxy that strips the client's copy |
+
+---
+
 ## Database
 
 `database/schema.sql` creates a fresh database. For an existing one, apply the
@@ -151,6 +166,7 @@ migrations in order:
 
 ```bash
 mysql -u root -p online_exam_db < database/migrations/001_phase2_integrity.sql
+mysql -u root -p online_exam_db < database/migrations/002_phase3_security.sql
 ```
 
 Migrations are additive and safe to run against live data.
@@ -163,10 +179,21 @@ Migrations are additive and safe to run against live data.
 | `students` | `email` unique |
 | `exams` | `duration` in minutes |
 | `questions` | 4 options; `correct_answer` constrained to 1–4; cascades from `exams` |
-| `results` | one row per (student, exam); cascades from `students` and `exams` |
+| `results` | one row per (student, exam); links to the attempt that produced it |
+| `exam_attempts` | one sitting: `started_at`, `expires_at`, `status`, `score` |
+| `attempt_answers` | what was chosen per question, and whether it was correct |
+| `login_attempts` | failed sign-ins, for throttling |
 
-`results` carries `UNIQUE (student_id, exam_id)`, which is what makes a duplicate
-submission a harmless no-op rather than a second score.
+`results` carries `UNIQUE (student_id, exam_id)` and `exam_attempts` carries
+`UNIQUE (student_id, exam_id)`. Those two keys are what make one attempt per
+exam a storage guarantee rather than a hopeful check in application code.
+
+Attempt timestamps are `DATETIME` written by PHP in UTC. The database clock is
+never consulted for an exam deadline, because the MySQL server's timezone is
+not guaranteed to match the application's.
+
+Migration 002 backfills an attempt for every result recorded before Phase 3, so
+existing history stays consistent, and is safe to re-run.
 
 ---
 
@@ -188,6 +215,11 @@ Conventions:
 - **All URLs come from `url()` or `asset()`.** Never hardcode a path.
 - Business rules belong in `app/Services`, not in a template.
 - Destructive actions are POST, never a GET link.
+- **Every POST form includes `<?= csrf_field() ?>`.** The bootstrap rejects any
+  state-changing request without a valid token, so a form that omits it will
+  simply not work.
+- Anything a student could gain by cheating is decided in `ExamService`, from
+  the database — never from the request.
 
 ---
 
@@ -202,34 +234,80 @@ Before deploying:
 5. Confirm `.htaccess` is honoured (`AllowOverride All`), so `app/`, `database/`,
    `storage/` and `.env` are not downloadable.
 6. Ensure `storage/logs/` is writable by the web server.
-7. Change the seeded `admin` password.
+7. **Change the seeded `admin` password** — `admin` / `admin123` is published in
+   `schema.sql` and is a development convenience only.
+8. Leave `APP_TRUST_PROXY=false` unless a reverse proxy sets `X-Forwarded-Proto`
+   *and* strips any copy the client sent; otherwise a client can claim its own
+   connection was secure.
+9. Consider raising `BCRYPT_COST` if the server can afford it.
 
 ---
 
 ## Security posture
 
-Implemented:
-
 | Area | Implementation |
 |---|---|
+| CSRF | Session-bound token on every state-changing request, verified centrally in the bootstrap with `hash_equals`; rotated on sign-in and sign-out |
 | SQL injection | PDO prepared statements everywhere, emulation disabled |
-| Password storage | `password_hash()` / `password_verify()` (bcrypt) |
+| Password storage | bcrypt at a configurable cost, re-hashed on sign-in when policy changes; 8–72 byte policy |
+| Brute force | Per-identifier and per-address lockout over a moving window, counted in the database |
 | Output escaping | `e()` (`htmlspecialchars` with `ENT_QUOTES`) on all output |
+| Content Security Policy | `script-src 'self'` — no inline script anywhere in the view layer |
 | Authorisation | Server-side guards that terminate the request on failure |
 | Object scoping | Every student query filters by session id; questions scope to their exam |
-| Grading | Server-authoritative, from the database answer key |
-| Session | Regenerated on login, `HttpOnly`, `SameSite=Lax`, strict mode, `Secure` on HTTPS |
-| Destructive actions | POST-only |
+| Exam integrity | Server-owned attempts: pinned deadline, server-side grading, one attempt per exam |
+| Duplicate submission | Status predicate on the attempt update, plus unique keys on `results` |
+| Transactions | Attempt close, answer storage and result creation commit together or not at all |
+| Session | Idle and absolute timeouts, periodic id rotation, `HttpOnly`, `SameSite=Lax`, strict mode, `Secure` on HTTPS |
+| Destructive actions | POST-only, including sign-out |
 | Error disclosure | Generic page in production; detail only in the log |
 | Secrets | Environment file, git-ignored |
 
-Known gaps, scheduled for the next phase:
+### How exam integrity works
 
-- **No CSRF tokens yet.** State-changing POSTs are not yet token-protected.
-- **Exam timing is still client-side.** The server does not record when an attempt
-  started, so it cannot reject a late submission.
-- No rate limiting on login.
-- No per-question answer storage, so results cannot show a per-question review.
+A sitting is a row in `exam_attempts`, created when the student opens the exam:
+
+```text
+open take_exam.php
+  -> attempt created, expires_at = now + exam.duration   (pinned)
+  -> page receives seconds_remaining, purely to draw a countdown
+
+submit
+  -> attempt must exist, belong to this student, and still be in progress
+  -> now > expires_at + grace ?  recorded as expired, scores zero
+  -> graded against the database answer key
+  -> attempt closed, answers stored, result written   (one transaction)
+```
+
+The client-side countdown has no authority. Editing it, stopping it, or
+blocking `exam.js` entirely buys no extra time, because the deadline is
+re-checked on the server when the answers arrive. A short, configurable grace
+window (`EXAM_SUBMIT_GRACE`) absorbs the flight time of the client's own
+auto-submit so a slow connection does not cost a student their paper.
+
+Only questions belonging to the exam are graded, and only a clean `1`–`4`
+counts, so a crafted submission cannot introduce another exam's questions or
+assert its own score. Per-question answers are stored, so a score can be
+audited rather than taken on trust.
+
+### Remaining limitations
+
+- **Answers are only stored on submission.** If a student closes the browser
+  mid-exam, the attempt expires and scores zero; there is no autosave. Adding
+  one means an authenticated endpoint that writes answers as they are chosen.
+- **One administrator role.** Any admin can do anything an admin can do; there
+  are no granular permissions.
+- **No email verification or password reset**, so an account is only as
+  recoverable as its password.
+- **The seeded `admin` / `admin123` account is documented in `schema.sql`.** It
+  is a development convenience and must be changed before deployment.
+- **`style-src` still allows inline**, because progress bars set their width
+  with a style attribute, which a nonce cannot cover. Moving those widths into
+  classes would let it be tightened.
+- **No account lockout notification**, so a user is not told their account was
+  targeted.
+- **Throttle rows are purged opportunistically** on write rather than by a
+  scheduled job.
 
 ---
 
