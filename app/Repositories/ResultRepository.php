@@ -20,36 +20,31 @@ final class ResultRepository
     {
         return Database::fetch(
             'SELECT r.result_id, r.student_id, r.exam_id, r.score, r.total, r.date_taken,
-                    e.title, e.description, e.duration
+                    e.title, e.description, e.duration,
+                    a.status, a.started_at, a.submitted_at
                FROM results r
                JOIN exams e ON e.exam_id = r.exam_id
+          LEFT JOIN exam_attempts a ON a.attempt_id = r.attempt_id
               WHERE r.student_id = ? AND r.exam_id = ?',
             [$studentId, $examId]
         );
     }
 
-    public function hasAttempted(int $studentId, int $examId): bool
-    {
-        return Database::fetch(
-            'SELECT result_id FROM results WHERE student_id = ? AND exam_id = ?',
-            [$studentId, $examId]
-        ) !== null;
-    }
-
     /**
      * Record a completed attempt.
      *
-     * INSERT IGNORE relies on the unique (student_id, exam_id) key to make a
-     * duplicate submission a no-op even when two requests race.
-     *
-     * @return bool true when this call created the row
+     * A plain INSERT, not INSERT IGNORE. The gate against a duplicate
+     * submission is now ExamService closing the attempt row, and this call
+     * runs inside that same transaction; a unique-key violation here means
+     * the two disagree, which must roll the whole submission back loudly
+     * rather than leave a closed attempt with no result behind it.
      */
-    public function record(int $studentId, int $examId, int $score, int $total): bool
+    public function record(int $attemptId, int $studentId, int $examId, int $score, int $total): void
     {
-        return Database::execute(
-            'INSERT IGNORE INTO results (student_id, exam_id, score, total) VALUES (?, ?, ?, ?)',
-            [$studentId, $examId, $score, $total]
-        ) > 0;
+        Database::execute(
+            'INSERT INTO results (attempt_id, student_id, exam_id, score, total) VALUES (?, ?, ?, ?, ?)',
+            [$attemptId, $studentId, $examId, $score, $total]
+        );
     }
 
     /** @return list<array<string,mixed>> */

@@ -2,9 +2,19 @@
  * exam.js - Exam countdown timer and question navigation.
  *
  * Reads its configuration from the DOM:
- *   #timer-display[data-duration]  exam length in minutes
- *   .question-slide[data-index]    one per question
- *   .q-nav-btn[data-index]         question navigator buttons
+ *   #timer-display[data-seconds-remaining]  time left, calculated by the server
+ *   .question-slide[data-index]             one per question
+ *   .q-nav-btn[data-index]                  question navigator buttons
+ *
+ * The countdown is a convenience, not a control. The authoritative deadline
+ * is exam_attempts.expires_at, fixed when the attempt began and re-checked
+ * when the answers arrive. Editing the number below, pausing the interval, or
+ * blocking this file entirely buys no extra time: a submission that reaches
+ * the server late is recorded as expired whatever the page believed.
+ *
+ * Starting from a server-supplied remaining time rather than the exam's full
+ * duration is what makes a reload resume the same clock instead of restarting
+ * it.
  *
  * The answers a student picks are carried by the radio inputs themselves,
  * which the form posts normally. Grading happens server-side against the
@@ -51,9 +61,17 @@
     }
   }
 
-  function startTimer(durationMinutes) {
-    secondsLeft = durationMinutes * 60;
-    timerDisplay.textContent = formatTime(secondsLeft);
+  function startTimer(remainingSeconds) {
+    secondsLeft = remainingSeconds;
+    timerDisplay.textContent = formatTime(Math.max(0, secondsLeft));
+    updateTimerStyle();
+
+    if (secondsLeft <= 0) {
+      timerLabel.textContent = 'Time Up!';
+      autoSubmit();
+      return;
+    }
+
     timerInterval = setInterval(tick, 1000);
   }
 
@@ -222,7 +240,8 @@
     bindOptions();
     showQuestion(0);
     updateProgress();
-    startTimer(parseInt(timerDisplay.dataset.duration, 10) || 30);
+    var remaining = parseInt(timerDisplay.dataset.secondsRemaining, 10);
+    startTimer(isNaN(remaining) ? 0 : remaining);
 
     window.addEventListener('beforeunload', warnBeforeUnload);
   });

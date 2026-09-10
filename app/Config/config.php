@@ -54,6 +54,11 @@ return [
     'exam' => [
         'pass_mark'    => (int) Env::get('EXAM_PASS_MARK', 60),
         'max_duration' => (int) Env::get('EXAM_MAX_DURATION', 300),
+        // Seconds a submission may arrive after the deadline and still count.
+        // The client auto-submits at zero, so the request is already in
+        // flight as time runs out; without this a slow connection would cost
+        // a student their paper. Beyond it, the attempt is recorded expired.
+        'submit_grace' => (int) Env::get('EXAM_SUBMIT_GRACE', 60),
     ],
 
     'paths' => [

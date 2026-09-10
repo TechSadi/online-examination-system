@@ -6,8 +6,16 @@
  * from QuestionRepository::forExamWithoutAnswers(), so the answer key is never
  * present in the HTML.
  *
+ * The countdown below is drawn from a figure the server calculated, and is
+ * only a convenience for the student. The authoritative deadline lives in
+ * exam_attempts.expires_at and is re-checked when the answers arrive, so
+ * editing this page, stopping the timer, or never running the script at all
+ * cannot buy any extra time.
+ *
  * @var array<string,mixed>       $exam
  * @var list<array<string,mixed>> $questions
+ * @var int                       $secondsRemaining server-calculated
+ * @var bool                      $resumed          true when re-entering
  */
 $letters = ['A', 'B', 'C', 'D'];
 $count   = count($questions);
@@ -18,6 +26,12 @@ $count   = count($questions);
 </div>
 
 <div class="container">
+  <?php if (!empty($resumed)): ?>
+    <div class="alert alert-warning" role="status">
+      &#9201; <strong>Attempt resumed.</strong> Your exam clock started when you
+      first opened this page and has kept running since.
+    </div>
+  <?php endif; ?>
   <div class="exam-progress">
     <div class="exam-progress-head">
       <span class="exam-progress-title">Progress</span>
@@ -66,9 +80,10 @@ $count   = count($questions);
     <div>
       <div class="timer-widget" id="timer-widget">
         <div class="timer-label">Time Remaining</div>
-        <div class="timer-display" id="timer-display" data-duration="<?= (int) $exam['duration'] ?>"
+        <div class="timer-display" id="timer-display"
+             data-seconds-remaining="<?= (int) $secondsRemaining ?>"
              role="timer" aria-live="polite" aria-atomic="true">
-          <?= sprintf('%02d:00', (int) $exam['duration']) ?>
+          <?= sprintf('%02d:%02d', intdiv((int) $secondsRemaining, 60), (int) $secondsRemaining % 60) ?>
         </div>
         <div class="timer-label" id="timer-label">&#9201; Stay focused!</div>
       </div>
