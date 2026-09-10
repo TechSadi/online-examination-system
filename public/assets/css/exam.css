@@ -1,0 +1,525 @@
+/* ============================================================
+   exam.css — the examination interface
+   ------------------------------------------------------------
+   Loaded only by take_exam.php. This is the screen a student
+   spends the longest on and the one where a moment of confusion
+   costs marks, so it is deliberately quieter than the rest of
+   the application: no decorative colour, one accent, and every
+   piece of colour on it carries a meaning.
+
+   There is exactly one timer, in the bar at the top, visible at
+   every breakpoint. An earlier draft had a second copy in the
+   side rail; two clocks on one page is one clock too many.
+   ============================================================ */
+
+/* ── Exam bar ───────────────────────────────────────────── */
+/* Sits directly beneath the top bar and stays there. Carries
+   the three facts a candidate needs continuously: which exam,
+   how far through, how long is left.
+
+   The exam title is the page's <h1> - it is what this page is
+   about - so it is styled down to fit the bar rather than given
+   a heading's default size. */
+.exam-bar {
+  position: sticky;
+  top: var(--topbar-h);
+  z-index: var(--z-sticky);
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  backdrop-filter: saturate(180%) blur(12px);
+}
+
+.exam-bar-inner {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+  max-width: var(--container);
+  margin-inline: auto;
+  padding: var(--sp-3) var(--gutter);
+}
+
+.exam-bar-title {
+  min-width: 0;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+  color: var(--color-text-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.exam-bar-progress {
+  flex: 1;
+  min-width: 90px;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.exam-bar-progress .progress { flex: 1; }
+
+.exam-progress-count {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Timer -------------------------------------------------- */
+.timer {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  flex: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-md);
+  background: var(--color-surface);
+  color: var(--color-text-strong);
+  box-shadow: var(--shadow-xs);
+  transition: background-color var(--dur-base) var(--ease-in-out),
+              border-color var(--dur-base) var(--ease-in-out),
+              color var(--dur-base) var(--ease-in-out);
+}
+
+.timer .icon { color: var(--color-text-subtle); }
+
+.timer-value {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  line-height: 1;
+}
+
+.timer-caption {
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* Five minutes left, then one minute left. The change is in
+   colour and in the label, not only in colour. */
+.timer.is-warning {
+  background: var(--color-warning-soft);
+  border-color: var(--color-warning-border);
+  color: var(--color-warning-text);
+}
+.timer.is-warning .icon,
+.timer.is-warning .timer-caption { color: var(--color-warning-text); }
+
+.timer.is-critical {
+  background: var(--color-danger-soft);
+  border-color: var(--color-danger-border);
+  color: var(--color-danger-text);
+}
+.timer.is-critical .icon,
+.timer.is-critical .timer-caption { color: var(--color-danger-text); }
+
+/* One slow pulse, not a flash: it should draw the eye once and
+   then stop competing with the question. */
+@media (prefers-reduced-motion: no-preference) {
+  .timer.is-critical { animation: timer-pulse 2s var(--ease-in-out) infinite; }
+}
+
+@keyframes timer-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(217, 45, 32, .28); }
+  50%      { box-shadow: 0 0 0 6px rgba(217, 45, 32, 0); }
+}
+
+/* A notice between the exam bar and the questions: the resumed
+   warning, for example. */
+.exam-notice { margin-top: var(--sp-4); }
+
+/* ── Layout ─────────────────────────────────────────────── */
+.exam-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 296px;
+  gap: var(--sp-6);
+  align-items: start;
+  padding-block: var(--sp-6) var(--sp-12);
+}
+
+.exam-rail {
+  position: sticky;
+  top: calc(var(--topbar-h) + 66px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+/* ── Question ───────────────────────────────────────────── */
+/* One question at a time is an enhancement. The default here is
+   the scripted case because that is what nearly every visitor
+   gets; the <noscript> block in the view reverses it and shows
+   the whole paper. */
+.question { display: none; }
+.question.is-active { display: block; }
+
+/* Controls that exist only because a script drives them, and the
+   plain fallback that replaces them when none does. */
+.no-js-only { display: none; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .question.is-active { animation: question-in var(--dur-base) var(--ease-out); }
+}
+
+@keyframes question-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.question-card {
+  padding: var(--sp-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.question-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+
+.question-counter {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* The question is the legend of the fieldset holding its
+   options, so a screen reader reads it before each choice
+   instead of leaving them as four unlabelled radio buttons. */
+.question-text {
+  display: block;
+  margin-bottom: var(--sp-5);
+  padding: 0;
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--ls-tight);
+  color: var(--color-text-strong);
+}
+
+.options { display: grid; gap: var(--sp-3); }
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  min-height: var(--tap-min);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--r-md);
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-in-out),
+              background-color var(--dur-fast) var(--ease-in-out),
+              box-shadow var(--dur-fast) var(--ease-in-out);
+}
+
+.option:hover { border-color: var(--color-primary); background: var(--color-primary-soft); }
+
+/* The native radio is the accessible control and stays in the
+   accessibility tree; it is only removed from view because the
+   lettered token below says the same thing more legibly. */
+.option input[type="radio"] {
+  position: absolute;
+  width: 1px; height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.option-letter {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--r-full);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  transition: inherit;
+}
+
+.option-text { font-size: var(--fs-base); line-height: var(--lh-snug); }
+
+.option:has(input:checked) {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  box-shadow: 0 0 0 1px var(--color-primary);
+}
+
+.option:has(input:checked) .option-letter {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-text-on-primary);
+}
+
+.option:has(input:checked) .option-text {
+  color: var(--color-text-strong);
+  font-weight: var(--fw-medium);
+}
+
+/* Keyboard focus lands on the hidden radio, so the ring has to
+   be drawn on the label that stands in for it. */
+.option:has(input:focus-visible) {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* ── Navigation controls ────────────────────────────────── */
+.question-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-top: var(--sp-5);
+}
+
+.question-nav-end { display: flex; gap: var(--sp-2); margin-left: auto; }
+
+/* A flagged question says so on the button as well as in the
+   navigator, so the state is visible from either place. */
+[data-flag].is-flagged {
+  background: var(--color-warning-soft);
+  color: var(--color-warning-text);
+}
+[data-flag].is-flagged .icon { fill: var(--color-warning); color: var(--color-warning); }
+
+/* ── Question navigator ─────────────────────────────────── */
+.navigator-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(38px, 1fr));
+  gap: var(--sp-2);
+}
+
+.q-nav {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  min-height: 38px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--r-sm);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-in-out),
+              background-color var(--dur-fast) var(--ease-in-out),
+              color var(--dur-fast) var(--ease-in-out);
+}
+
+.q-nav:hover { border-color: var(--color-primary); color: var(--color-primary-text); }
+
+.q-nav.is-answered {
+  background: var(--color-success-soft);
+  border-color: var(--color-success-border);
+  color: var(--color-success-text);
+}
+
+/* Current wins over answered: it says where you are, which is
+   the more urgent fact. */
+.q-nav.is-current {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-text-on-primary);
+}
+
+/* A flag is a corner marker rather than a fill, so it can be
+   seen at the same time as answered or current. */
+.q-nav.is-flagged::after {
+  content: "";
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  border-width: 0 9px 9px 0;
+  border-style: solid;
+  border-color: transparent var(--color-warning) transparent transparent;
+  border-top-right-radius: var(--r-sm);
+}
+
+.navigator-legend {
+  display: grid;
+  gap: var(--sp-2);
+  margin-top: var(--sp-4);
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--color-border-subtle);
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+}
+
+.legend-item { display: flex; align-items: center; gap: var(--sp-2); }
+
+.legend-swatch {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--r-xs);
+  background: var(--color-surface);
+}
+.legend-answered { background: var(--color-success-soft); border-color: var(--color-success-border); }
+.legend-current  { background: var(--color-primary); border-color: var(--color-primary); }
+.legend-flagged  { background: var(--color-warning-soft); border-color: var(--color-warning); }
+
+/* ── Instructions ───────────────────────────────────────── */
+.exam-help { font-size: var(--fs-sm); color: var(--color-text-muted); }
+.exam-help li { display: flex; gap: var(--sp-2); line-height: var(--lh-snug); }
+.exam-help li + li { margin-top: var(--sp-2); }
+.exam-help .icon { width: 0.9rem; height: 0.9rem; margin-top: 0.2rem; color: var(--color-text-subtle); }
+
+kbd {
+  padding: 1px 5px;
+  border: 1px solid var(--color-border-strong);
+  border-bottom-width: 2px;
+  border-radius: var(--r-xs);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 0.85em;
+  font-family: var(--font-sans);
+  font-weight: var(--fw-semibold);
+}
+
+/* Pointer-only guidance is hidden where there is no pointer. */
+@media (hover: none) and (pointer: coarse) {
+  .exam-help-keys { display: none; }
+}
+
+/* ── Small screens ──────────────────────────────────────── */
+@media (max-width: 1023px) {
+  .exam-layout {
+    grid-template-columns: minmax(0, 1fr);
+    /* Room for the fixed action bar, plus the safe area on
+       phones with a home indicator. */
+    padding-bottom: calc(var(--sp-20) + env(safe-area-inset-bottom));
+  }
+
+  .exam-rail { position: static; }
+
+  /* On a narrow screen the previous/next pair moves to a fixed
+     bar at the bottom of the viewport: it is where the thumb
+     is, and it stops the student hunting for it after a long
+     question. */
+  .question-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: var(--z-sticky);
+    margin: 0;
+    padding: var(--sp-3) var(--gutter);
+    padding-bottom: calc(var(--sp-3) + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--color-border);
+    background: var(--color-surface);
+    box-shadow: 0 -4px 12px -6px rgba(20, 25, 34, .18);
+  }
+
+  .question-nav .btn { min-height: var(--tap-min); }
+}
+
+@media (max-width: 640px) {
+  .exam-bar-inner {
+    flex-wrap: wrap;
+    gap: var(--sp-2) var(--sp-3);
+    padding-block: var(--sp-2);
+  }
+
+  /* Title and timer share the first line, the progress bar gets
+     the second: the timer never leaves the screen. */
+  .exam-bar-title { flex: 1; }
+  .exam-bar-progress { flex-basis: 100%; order: 3; }
+  .timer { padding: var(--sp-1) var(--sp-2); }
+  .timer-caption { display: none; }
+
+  .question-card { padding: var(--sp-4); }
+  .question-text { font-size: var(--fs-lg); }
+  .option { padding: var(--sp-3); }
+}
+
+/* ── Submission ─────────────────────────────────────────── */
+/* The confirmation dialog for handing in. It lists what is
+   still unanswered rather than only counting it, so the choice
+   to submit anyway is an informed one. */
+.submit-summary {
+  margin-top: var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--color-warning-border);
+  border-radius: var(--r-md);
+  background: var(--color-warning-soft);
+  color: var(--color-warning-text);
+  font-size: var(--fs-sm);
+}
+
+.submit-summary-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  margin-top: var(--sp-2);
+}
+
+.submit-summary-list span {
+  display: inline-grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  padding-inline: var(--sp-1);
+  border: 1px solid var(--color-warning-border);
+  border-radius: var(--r-xs);
+  background: var(--color-surface);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Shown while the browser posts the answers, so the student is
+   never looking at a page that appears to have done nothing. */
+.exam-submitting {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: grid;
+  place-items: center;
+  gap: var(--sp-4);
+  background: color-mix(in srgb, var(--color-bg) 88%, transparent);
+  backdrop-filter: blur(3px);
+  text-align: center;
+}
+
+.exam-submitting-inner {
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-8);
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--color-border-strong);
+  border-top-color: var(--color-primary);
+  border-radius: var(--r-full);
+  animation: spin 700ms linear infinite;
+}
+
+.exam-submitting p {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semibold);
+  color: var(--color-text-strong);
+}
+.exam-submitting small { color: var(--color-text-muted); }

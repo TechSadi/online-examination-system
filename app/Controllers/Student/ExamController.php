@@ -81,8 +81,11 @@ final class ExamController
 
         View::render('student/take_exam', [
             'pageTitle'        => 'Taking: ' . $exam['title'],
-            'role'             => 'student',
+            // A chrome of its own: brand and account only. Links to the rest
+            // of the application do not belong beside a running clock.
+            'role'             => 'exam',
             'includeExamJS'    => true,
+            'includeExamCSS'   => true,
             'exam'             => $exam,
             'questions'        => $questions,
             'secondsRemaining' => $session['seconds_remaining'],
