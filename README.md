@@ -70,10 +70,13 @@ online-exam-system/
 │   │   ├── Env.php             .env parser
 │   │   ├── ErrorHandler.php    Central error/exception handling and logging
 │   │   ├── Flash.php           One-request messages, old input, validation errors
+│   │   ├── Icons.php           The SVG icon set and its inline sprite
+│   │   ├── Paginator.php       Page arithmetic for a listing
 │   │   ├── Request.php         Typed request input
 │   │   ├── Response.php        Redirect helpers
 │   │   ├── Session.php         Session lifecycle and cookie hardening
-│   │   ├── Url.php             URL generation
+│   │   ├── Sorter.php          Request-chosen sort, resolved against an allowlist
+│   │   ├── Url.php             URL generation and asset cache-busting
 │   │   └── View.php            Template rendering with layouts
 │   ├── Controllers/            One class per area; page files just dispatch here
 │   │   ├── HomeController.php
@@ -83,10 +86,11 @@ online-exam-system/
 │   ├── Repositories/           All SQL lives here, one class per table
 │   ├── Services/               Business rules (grading, authentication)
 │   ├── Validation/Validator.php
-│   ├── Helpers/functions.php   View helpers: e(), url(), asset(), percentage()
+│   ├── Helpers/functions.php   View helpers: e(), url(), asset(), icon(), …
 │   └── Views/
-│       ├── layouts/            app.php (public/student), admin.php
-│       ├── partials/           head, navbar, sidebar, footer, alerts
+│       ├── layouts/            app.php (public/student/exam), admin.php
+│       ├── partials/           head, topbar, account menu, sidebar, footer,
+│       │                       alerts, confirm dialog, pagination, sort header
 │       ├── admin/
 │       └── student/
 │
@@ -94,8 +98,16 @@ online-exam-system/
 ├── student/                    Student entry points (thin dispatchers)
 │
 ├── public/assets/
-│   ├── css/style.css
+│   ├── css/                    Layered; see docs/design-system.md
+│   │   ├── tokens.css          Design decisions, named. Draws nothing.
+│   │   ├── base.css            Elements, typography, focus, motion, print
+│   │   ├── components.css      The reusable component vocabulary
+│   │   ├── layout.css          Application shell and responsive behaviour
+│   │   ├── pages.css           Single-screen compositions
+│   │   └── exam.css            The examination interface only
 │   └── js/{app.js, exam.js}
+│
+├── docs/design-system.md       Tokens, components, accessibility, known gaps
 │
 ├── database/
 │   ├── schema.sql              Full schema + seed data for a fresh install
@@ -243,6 +255,32 @@ Before deploying:
 
 ---
 
+## Interface
+
+The whole of the front end is six stylesheets and two scripts — no framework,
+no build step, no webfont request. Design decisions live as tokens in
+`public/assets/css/tokens.css`; a colour or a rhythm step is changed there
+once rather than hunted through the pages that use it.
+
+- **A real component set.** Buttons, fields, cards, tables, badges, alerts,
+  dialogs, menus, pagination and breadcrumbs are defined once in
+  `components.css`. A page composes them; it does not restyle them.
+- **Icons are SVG, not emoji.** `icon('trash')` renders from an inline sprite,
+  inherits `currentColor`, and is hidden from screen readers unless it carries
+  meaning no label repeats.
+- **WCAG AA throughout.** Every text pair in the palette meets 4.5:1 and every
+  operable control's outline meets 3:1, measured rather than eyeballed. Colour
+  is never the only signal.
+- **Reconsidered at every breakpoint.** Tables restack as labelled blocks on a
+  phone, the admin sidebar becomes a proper drawer, and the exam's controls
+  move to a fixed bar under the thumb.
+- **Degrades without JavaScript**, including the exam itself.
+
+Full reference, including the remaining known gaps:
+**[docs/design-system.md](docs/design-system.md)**.
+
+---
+
 ## Security posture
 
 | Area | Implementation |
@@ -301,9 +339,9 @@ audited rather than taken on trust.
   recoverable as its password.
 - **The seeded `admin` / `admin123` account is documented in `schema.sql`.** It
   is a development convenience and must be changed before deployment.
-- **`style-src` still allows inline**, because progress bars set their width
-  with a style attribute, which a nonce cannot cover. Moving those widths into
-  classes would let it be tightened.
+- **`style-src` still allows inline**, because progress bars, the score ring
+  and the pagination window set a numeric value with a style attribute, which
+  a nonce cannot cover. Moving those into classes would let it be tightened.
 - **No account lockout notification**, so a user is not told their account was
   targeted.
 - **Throttle rows are purged opportunistically** on write rather than by a
