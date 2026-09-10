@@ -31,6 +31,11 @@ screen it moves from `pages.css` into `components.css` as a modifier. Copying
 it is how the previous stylesheet ended up with four different card
 treatments.
 
+**The rule that makes theming work:** a component asks for a semantic role,
+never a primitive scale. Dark mode redefines the roles and nothing else, so a
+component that asked correctly follows the theme automatically and one that
+reached past it would not. See section 3.
+
 Layering also applies within a file. `tokens.css` defines primitive scales
 (`--n-500`, `--b-600`) and then the semantic roles built on them
 (`--color-text-muted`, `--color-primary`). Components reference the roles. A
@@ -61,6 +66,7 @@ The roles are what screens actually use:
 | `--color-text-subtle` | Icons and swatches. **Never text** — see below |
 | `--color-border` | Dividers and hairlines |
 | `--color-border-strong` | The outline of anything you can operate |
+| `--color-border-hover` | That outline under the pointer |
 | `--color-primary` (+ `-hover`, `-active`, `-soft`) | The one accent |
 | `--color-success` / `-warning` / `-danger` / `-info` | Meaning, each with a `-soft` fill, a `-border` and a `-text` |
 
@@ -119,7 +125,98 @@ column.
 
 ---
 
-## 3. Components
+## 3. Light and dark
+
+Three states: **Match system** (the default), **Light** and **Dark**. System is
+the one most people should stay on, because it already follows whatever
+schedule their operating system runs; the other two are overrides for when
+that does not suit the room.
+
+### How it is applied
+
+The choice lives in a cookie, and the layout stamps it onto `<html>`
+server-side:
+
+```html
+<html lang="en" data-theme="dark">
+```
+
+That ordering is the whole point. Reading the preference in JavaScript would
+mean painting the light theme first and correcting it a frame later — the
+white flash every dark mode is judged by — and the Content-Security-Policy
+rightly refuses the inline `<script>` that is the usual way of dodging it. A
+cookie is readable on the very first request, before anything else has run, so
+the page simply arrives in the right colours.
+
+A cookie rather than the session, because the preference has to survive
+signing out. Deliberately not `HttpOnly`, because the toggle updates it from
+JavaScript so switching is instant rather than a page load; it holds a colour
+name and nothing else. Its value is checked against the allowlist on the way
+in — it ends up in an HTML attribute, and a cookie is client-supplied data
+like any other.
+
+### The three CSS blocks
+
+```css
+:root                     { /* light: the complete palette */ }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { /* system dark */ }
+}
+
+:root[data-theme="dark"]  { /* explicit choice, wins either way */ }
+```
+
+The `:not([data-theme="light"])` guard is what stops a reader who asked for
+light on a machine set to dark from getting dark anyway. The two dark blocks
+cannot be merged — one exists only inside a media query — but they assign from
+a single `--dk-*` scale, so a colour still has one place to change.
+
+### Designing the dark palette
+
+It is not the light one inverted. The decisions that matter:
+
+- Surfaces are near-black with a blue cast, not `#000`, which makes shadows
+  invisible and text edges harsh.
+- The lift from page to card is slight; separation comes mostly from the
+  border. That is what keeps a dark interface calm rather than making it look
+  like a stack of floating panels.
+- **Solid fills go darker, not lighter.** They still carry white text and have
+  to clear 4.5:1 to do it. Text and icon colours go lighter for the same
+  reason. This is the step a naive inversion gets backwards, and it is why
+  `--color-success` and `--color-success-text` are separate roles.
+- Soft tints become near-black mixes of their hue; the pale washes light mode
+  uses would glow.
+- Shadow alphas roughly triple, because there is no bright ground to lift off.
+
+Both palettes were verified twice: once as arithmetic over the tokens, and
+once by measuring what the browser actually renders on all 15 pages — walking
+every element with visible text, compositing translucent backgrounds down to
+an opaque one, and checking the pair. That second pass caught a real bug the
+first missed: the correct-answer letter in the question manager was taking
+`--color-success` (a fill, tuned to carry white) where it needed
+`--color-success-text`.
+
+### The picker
+
+Built on `<details>` rather than the scripted dropdown beside it, because it
+has to work without JavaScript: someone who needs the light theme in order to
+read the screen should not need scripting to ask for it. Each option is a
+submit button in a CSRF-protected POST to `theme.php`, which stores the cookie
+and returns them to the page they were on — after checking the return path is
+local, since an unchecked "send me back" field is an open redirect.
+
+With JavaScript, `app.js` intercepts the click, writes the same cookie, moves
+the attribute and repaints in place, so switching costs no round trip.
+
+### Print
+
+Printing forces the light roles back regardless of the screen. A near-black
+page through a printer comes out as a grey wash, and nobody asked for it.
+
+---
+
+## 4. Components
 
 All in `components.css`. Every one of these is used; none was built
 speculatively.
@@ -154,7 +251,7 @@ something that already works.
 
 ---
 
-## 4. Major changes by screen
+## 5. Major changes by screen
 
 | Screen | What changed |
 |---|---|
@@ -195,7 +292,7 @@ application: one accent, and every piece of colour carries meaning.
 
 ---
 
-## 5. Responsive behaviour
+## 6. Responsive behaviour
 
 Breakpoints: **1024px** (sidebar becomes a drawer), **900px** (split layouts
 stack), **768px** (tables restack), **640px** (phone adjustments).
@@ -221,7 +318,7 @@ Verified with no horizontal overflow at 390px on every page.
 
 ---
 
-## 6. Accessibility
+## 7. Accessibility
 
 - **Contrast.** Every text pair in the palette meets WCAG AA (4.5:1) against
   the surfaces it appears on, and the boundary of every operable control meets
@@ -249,11 +346,13 @@ Verified with no horizontal overflow at 390px on every page.
 - **Placeholders are never the only label.** Every field has a visible one.
 
 Audited programmatically across all 16 pages: labels, accessible names,
-heading order, landmarks, table headers, duplicate ids and `lang`.
+heading order, landmarks, table headers, duplicate ids and `lang`. Contrast is
+audited separately at runtime, in both themes, by measuring what the browser
+renders rather than what the palette intends.
 
 ---
 
-## 7. Performance
+## 8. Performance
 
 - **No webfont request.** The system stack paints on the first frame.
 - **No UI library.** Total shipped CSS is ~52KB uncompressed across six files;
@@ -270,13 +369,15 @@ heading order, landmarks, table headers, duplicate ids and `lang`.
 
 ---
 
-## 8. Remaining UX issues
+## 9. Remaining UX issues
 
 Known, deliberate, and worth picking up next:
 
-- **No dark mode.** The tokens are structured for it — one block of role
-  overrides would do it — but it doubles the visual QA surface and was out of
-  scope for this phase.
+- **The theme is per-browser, not per-account.** It rides in a cookie, so a
+  student who signs in on a shared machine gets whatever the last person
+  chose, and their own choice does not follow them to their phone. Storing it
+  against the account would fix both, at the cost of a column and a write.
+
 - **Tables cannot be sorted on a phone.** The sort controls live in the table
   header, which is hidden when rows restack. A sort `<select>` in the toolbar
   at that breakpoint would fix it.

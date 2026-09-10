@@ -58,6 +58,7 @@ The schema seeds one administrator: username `admin`, password `admin123`.
 ```
 online-exam-system/
 ├── index.php                   Public home page (entry point)
+├── theme.php                   Stores the light/dark preference (POST only)
 ├── .env.example                Environment template — copy to .env
 ├── .htaccess                   Denies web access to app/, database/, storage/, .env
 │
@@ -76,10 +77,12 @@ online-exam-system/
 │   │   ├── Response.php        Redirect helpers
 │   │   ├── Session.php         Session lifecycle and cookie hardening
 │   │   ├── Sorter.php          Request-chosen sort, resolved against an allowlist
+│   │   ├── Theme.php           Light / dark / system preference
 │   │   ├── Url.php             URL generation and asset cache-busting
 │   │   └── View.php            Template rendering with layouts
 │   ├── Controllers/            One class per area; page files just dispatch here
 │   │   ├── HomeController.php
+│   │   ├── ThemeController.php
 │   │   ├── Admin/
 │   │   └── Student/
 │   ├── Middleware/Auth.php     requireStudent / requireAdmin / requireGuest
@@ -274,7 +277,11 @@ once rather than hunted through the pages that use it.
 - **Reconsidered at every breakpoint.** Tables restack as labelled blocks on a
   phone, the admin sidebar becomes a proper drawer, and the exam's controls
   move to a fixed bar under the thumb.
-- **Degrades without JavaScript**, including the exam itself.
+- **Light, dark and match-system**, chosen from the top bar. The preference is
+  stamped onto `<html>` server-side from a cookie, so a page arrives already in
+  the right colours instead of flashing white first.
+- **Degrades without JavaScript**, including the exam itself and the theme
+  picker.
 
 Full reference, including the remaining known gaps:
 **[docs/design-system.md](docs/design-system.md)**.
