@@ -40,7 +40,8 @@ CREATE TABLE IF NOT EXISTS students (
     name       VARCHAR(100) NOT NULL,
     email      VARCHAR(150) NOT NULL UNIQUE,
     password   VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_students_created (created_at)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS exams (
@@ -48,7 +49,8 @@ CREATE TABLE IF NOT EXISTS exams (
     title       VARCHAR(200) NOT NULL,
     description TEXT,
     duration    SMALLINT UNSIGNED NOT NULL DEFAULT 30,
-    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_exams_created (created_at)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS questions (
@@ -60,19 +62,23 @@ CREATE TABLE IF NOT EXISTS questions (
     option3        VARCHAR(255) NOT NULL,
     option4        VARCHAR(255) NOT NULL,
     correct_answer TINYINT UNSIGNED NOT NULL,
-    FOREIGN KEY (exam_id) REFERENCES exams(exam_id) ON DELETE CASCADE
+    FOREIGN KEY (exam_id) REFERENCES exams(exam_id) ON DELETE CASCADE,
+    CONSTRAINT chk_questions_correct_answer CHECK (correct_answer BETWEEN 1 AND 4),
+    INDEX idx_questions_exam (exam_id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS results (
     result_id  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     student_id INT UNSIGNED NOT NULL,
     exam_id    INT UNSIGNED NOT NULL,
-    score      TINYINT UNSIGNED NOT NULL DEFAULT 0,
-    total      TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    score      SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    total      SMALLINT UNSIGNED NOT NULL DEFAULT 0,
     date_taken TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE,
     FOREIGN KEY (exam_id)    REFERENCES exams(exam_id) ON DELETE CASCADE,
-    UNIQUE KEY unique_attempt (student_id, exam_id)
+    UNIQUE KEY unique_attempt (student_id, exam_id),
+    INDEX idx_results_date_taken (date_taken),
+    INDEX idx_results_student_date (student_id, date_taken)
 ) ENGINE=InnoDB;
 
 -- Sample data
