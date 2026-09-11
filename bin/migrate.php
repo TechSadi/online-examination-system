@@ -29,6 +29,7 @@ if (PHP_SAPI !== 'cli') {
 require_once dirname(__DIR__) . '/app/bootstrap.php';
 
 use App\Core\Config;
+use App\Core\ConfigurationException;
 use App\Core\Database;
 
 const LEDGER = 'schema_migrations';
@@ -196,6 +197,10 @@ say();
 
 try {
     Database::connection();
+} catch (ConfigurationException $e) {
+    // Safe to repeat: it names a value the operator set, not one
+    // the driver reported back with a host and a user in it.
+    fail('  ' . $e->getMessage());
 } catch (Throwable) {
     // The detail is in the logged exception. The message here is deliberately
     // free of credentials, because build logs are not always private.

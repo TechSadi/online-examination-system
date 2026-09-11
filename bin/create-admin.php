@@ -32,6 +32,7 @@ if (PHP_SAPI !== 'cli') {
 require_once dirname(__DIR__) . '/app/bootstrap.php';
 
 use App\Core\Config;
+use App\Core\ConfigurationException;
 use App\Core\Database;
 use App\Core\Env;
 use App\Repositories\AdminRepository;
@@ -145,6 +146,10 @@ if ($errors !== []) {
 
 try {
     Database::connection();
+} catch (ConfigurationException $e) {
+    // Safe to repeat: it names a value the operator set, not one
+    // the driver reported back with a host and a user in it.
+    fail('  ' . $e->getMessage());
 } catch (Throwable) {
     fail('  Cannot connect to the database. Check the DB_* variables.');
 }

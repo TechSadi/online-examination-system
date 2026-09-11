@@ -112,8 +112,13 @@ final class Database
 
         if ($ca !== '') {
             if (!is_readable($ca)) {
-                throw new RuntimeException(sprintf(
-                    'DB_SSL_CA points at "%s", which cannot be read.',
+                // ConfigurationException rather than RuntimeException: this
+                // names a path the operator set themselves, so the CLI can
+                // repeat it instead of falling back to "check the DB_*
+                // variables" - which is no help when there are ten of them.
+                throw new ConfigurationException(sprintf(
+                    'DB_SSL_CA points at "%s", which does not exist or cannot be read. '
+                    . 'On Render, upload the CA as a Secret File and use the path Render reports for it.',
                     $ca
                 ));
             }
