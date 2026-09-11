@@ -384,8 +384,21 @@ Leave `DB_SSL_CA` empty and `DB_SSL=true` if there is no bundle. The connection 
 encrypted; it just is not verified, and the application says as much in
 `Database::tlsOptions()` rather than pretending otherwise.
 
-If the path is wrong, the container refuses to start and the log names the path it tried
-— not a generic "check the DB_* variables", because there are ten of them.
+If the path is wrong, the log names the path it tried — not a generic "check the DB_*
+variables", because there are ten of them.
+
+Nothing else is needed, but it is worth knowing what the entrypoint does with that file.
+Render mounts a Secret File owned by `root` with group `1000` and no world-read bit. The
+entrypoint runs as root and can read it; Apache's workers drop to `www-data`, which is
+uid 33 and in neither, and cannot. Left alone that produces a genuinely baffling failure
+— the database migrates successfully on boot, then every request reports a file that is
+plainly there as unreadable. So `docker/entrypoint.sh` stages the certificate at
+`/usr/local/share/examhub-db-ca.pem` with mode `0444` and re-points `DB_SSL_CA` at the
+copy.
+
+That copy weakens nothing. A CA certificate is a public document, published so that
+clients can check a server against it; the private key is the secret and never leaves the
+database provider.
 
 ### 5. Deploy
 
@@ -575,6 +588,7 @@ against `/healthz.php` is the cheapest way to close that gap and is not set up h
 | Migration fails | The container exits before Apache; the previous one keeps serving | Read the log — the runner names the file and the statement |
 | Locked out of the admin account | — | Re-run `bin/create-admin.php` against the production database to reset the password |
 | Credentials leaked | — | Rotate at the provider, update the Render environment, redeploy |
+| Migrations succeed on boot, then every request says `DB_SSL_CA ... cannot be read` | The CA is readable by root but not by `www-data` | The entrypoint stages it at mode `0444` to prevent exactly this. If you see it, the staging did not run — check the log for `entrypoint: database CA staged at ...`, and unblock immediately by clearing `DB_SSL_CA` (encrypted but unverified) while you investigate |
 
 ---
 
