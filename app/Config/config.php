@@ -28,6 +28,15 @@ return [
         'user'     => (string) Env::get('DB_USER', 'root'),
         'password' => (string) Env::get('DB_PASSWORD', ''),
         'charset'  => (string) Env::get('DB_CHARSET', 'utf8mb4'),
+        // Seconds to wait for a connection before giving up. A managed
+        // database is a network hop away, unlike a local socket.
+        'timeout'  => (int) Env::get('DB_TIMEOUT', 10),
+        // Encrypt the connection. Required by every managed MySQL provider
+        // and unnecessary for a local server on the same machine.
+        'ssl'      => (bool) Env::get('DB_SSL', false),
+        // Path to the provider's CA certificate. When set, the server's
+        // certificate is verified against it; DB_SSL is then implied.
+        'ssl_ca'   => (string) Env::get('DB_SSL_CA', ''),
     ],
 
     'session' => [
