@@ -66,12 +66,16 @@ final class Url
             return self::$basePath;
         }
 
-        $scriptName = str_replace(DIRECTORY_SEPARATOR, '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
-        $scriptFile = str_replace(DIRECTORY_SEPARATOR, '/', (string) ($_SERVER['SCRIPT_FILENAME'] ?? ''));
-        $root       = str_replace(DIRECTORY_SEPARATOR, '/', (string) Config::get('paths.root', ''));
+        $scriptName = self::slashes((string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+        $scriptFile = self::slashes((string) ($_SERVER['SCRIPT_FILENAME'] ?? ''));
+        $root       = self::slashes((string) Config::get('paths.root', ''));
 
-        $scriptDirUrl = rtrim(dirname($scriptName), '/');
-        $scriptDirFs  = rtrim(dirname($scriptFile), '/');
+        // dirname() is applied before the separators are normalised again
+        // because on Windows it returns "\" for the root, whatever it was
+        // given. Left alone that backslash survives as a path segment and
+        // every link on the page comes out as "/\/student/login.php".
+        $scriptDirUrl = rtrim(self::slashes(dirname($scriptName)), '/');
+        $scriptDirFs  = rtrim(self::slashes(dirname($scriptFile)), '/');
 
         // How many directories deep is this entry point inside the project?
         $depth = 0;
@@ -91,6 +95,12 @@ final class Url
         self::$basePath = $segments === [] ? '' : '/' . implode('/', $segments);
 
         return self::$basePath;
+    }
+
+    /** Normalise Windows separators to the forward slashes URLs use. */
+    private static function slashes(string $path): string
+    {
+        return str_replace(chr(92), '/', $path);
     }
 
     /** Reset the memoised base path. */
