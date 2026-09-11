@@ -1,15 +1,51 @@
-# Local environment — never commit real credentials
-.env
+# ============================================================
+#  Never committed
+#
+#  The rules below are deliberately broader than the files that
+#  exist today. A .gitignore that names only what is already
+#  there stops helping the moment someone creates .env.production
+#  to keep two deployments apart - which is exactly the file that
+#  must not be committed.
+# ============================================================
 
-# Runtime logs
+# Environment files. .env.example is the one exception: it is the
+# template, and it carries no real value for anything.
+.env
+.env.*
+!.env.example
+
+# Anything that looks like a key or a certificate. The database CA
+# is uploaded to Render as a Secret File, never kept in the repo.
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Runtime state. The log directory itself is tracked, through its
+# .gitkeep, because the application expects it to exist.
 storage/logs/*.log
+storage/logs/*.txt
+
+# Database dumps. A backup of production is production data.
+*.sql.gz
+*.dump
+dump.sql
+backup*.sql
 
 # Editor / OS noise
 .vscode/
 .idea/
 *.swp
+*.swo
+*~
 Thumbs.db
 .DS_Store
+desktop.ini
+
+# Dependency directories, should this project ever acquire any.
+/vendor/
+/node_modules/
 
 # Agent instructions
 CLAUDE.md
