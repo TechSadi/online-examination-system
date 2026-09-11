@@ -1,0 +1,16 @@
+# ExamHub
+#
+# Only the landing page and the two sign-in screens are worth finding. The
+# rest is behind a sign-in, where a crawler would only ever be handed the
+# login redirect anyway - and a student's result URL is nobody else's
+# business. Every page behind a sign-in also carries its own
+# "noindex, nofollow", because robots.txt is a request and a meta tag in a
+# page that has already been fetched is harder to ignore.
+
+User-agent: *
+Disallow: /admin/
+Disallow: /student/
+Disallow: /error.php
+Disallow: /healthz.php
+Disallow: /theme.php
+Allow: /

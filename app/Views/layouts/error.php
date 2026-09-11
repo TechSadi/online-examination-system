@@ -29,8 +29,10 @@ $icon = match (true) {
 <!DOCTYPE html>
 <html lang="en"<?= Theme::attribute() ?>>
 <head>
-  <?php View::partial('partials/head', ['pageTitle' => $pageTitle]); ?>
-  <meta name="robots" content="noindex">
+  <?php View::partial('partials/head', [
+      'pageTitle' => $pageTitle,
+      'role'      => 'error',
+  ]); ?>
 </head>
 <body class="error-body">
 <?= Icons::sprite() ?>
