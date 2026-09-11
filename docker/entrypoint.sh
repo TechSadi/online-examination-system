@@ -38,6 +38,49 @@ sed -i "s/^Listen .*/Listen ${PORT}/" /etc/apache2/ports.conf
 sed -i "s/<VirtualHost \*:[0-9]\{1,\}>/<VirtualHost *:${PORT}>/" \
     /etc/apache2/sites-available/000-default.conf
 
+# ── Database CA certificate ─────────────────────────────────
+# Render mounts a Secret File at /etc/secrets/<name> owned by
+# root with group 1000 and no world-read bit. This script runs
+# as root, so it can read it. Apache's workers drop to www-data,
+# which is uid 33 and in neither - so it cannot.
+#
+# The failure that produces is genuinely confusing: the
+# entrypoint migrates the database successfully, Apache starts,
+# and then every single request fails with "DB_SSL_CA points at
+# ... which does not exist or cannot be read", naming a file that
+# is plainly there. Two different users, one path.
+#
+# So the certificate is staged somewhere www-data can read and
+# DB_SSL_CA is re-pointed at the copy, which Apache inherits
+# through the exec below.
+#
+# Nothing is weakened by the copy. A CA certificate is a public
+# document - it is published precisely so that clients can check
+# a server against it, and it is worthless to an attacker. The
+# private key is the secret, and that never leaves the database
+# provider. Only the private half of a keypair would deserve the
+# permissions Render applies here.
+#
+# Staging it rather than adding www-data to group 1000 keeps this
+# working if Render ever changes that gid, and keeps it correct
+# on any other host.
+CA_STAGED=/usr/local/share/examhub-db-ca.pem
+
+if [ -n "${DB_SSL_CA:-}" ]; then
+    if [ -r "${DB_SSL_CA}" ]; then
+        install -m 0444 "${DB_SSL_CA}" "${CA_STAGED}"
+        DB_SSL_CA="${CA_STAGED}"
+        export DB_SSL_CA
+        echo "entrypoint: database CA staged at ${CA_STAGED} for www-data"
+    else
+        # Do not fail here. The application raises a
+        # ConfigurationException naming the path, which is a
+        # better message than anything this script can give, and
+        # it reaches the log the operator is already reading.
+        echo "entrypoint: WARNING - DB_SSL_CA is '${DB_SSL_CA}' but that file cannot be read" >&2
+    fi
+fi
+
 # ── Migrations ──────────────────────────────────────────────
 # Opt-in, because running schema changes automatically on boot
 # is only safe under conditions this deployment happens to meet
