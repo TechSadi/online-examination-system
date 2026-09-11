@@ -2,9 +2,10 @@
 #  ExamHub - Apache configuration
 #
 #  The application is served from this directory, so the
-#  non-public parts must be denied explicitly. Without this,
-#  database/schema.sql was downloadable over HTTP, exposing the
-#  schema and the seeded administrator password hash.
+#  non-public parts must be denied explicitly. Without this the
+#  SQL under database/ was downloadable over HTTP, and at the
+#  time that file also carried the seeded administrator's
+#  password hash.
 # ============================================================
 
 Options -Indexes
