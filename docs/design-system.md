@@ -319,6 +319,16 @@ Layouts are reconsidered at each, not shrunk:
 - **Student navigation stays in the bar** as icons rather than moving behind a
   hamburger: three destinations fit, and one tap beats two. The labels remain
   for screen readers.
+- **Nothing is hidden at a breakpoint unless it exists somewhere else.** The
+  public bar used to drop its "Administrators" link below 560px. That link was
+  the only route to `/admin/login.php` anywhere in the application — not the
+  footer, not the landing page, not the student sign-in screen — so a media
+  query locked an entire role out of the product on a phone. Two rules now
+  apply when deciding what a narrow bar sheds: prefer dropping what is
+  **duplicated** (the two buttons the hero repeats full-width directly below)
+  over what is **unique**, and give anything unique a second home that no
+  breakpoint can take away. The admin route is now in the top bar at every
+  width, in the footer, and on both student authentication screens.
 - **The exam's previous/next pair becomes a fixed bottom bar** on narrow
   screens — where the thumb is — with `env(safe-area-inset-bottom)` respected.
 - **Forms** collapse from two columns to one; every target is at least 44px.

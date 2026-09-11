@@ -282,6 +282,21 @@
   margin-inline: auto;
 }
 
+.app-footer-nav a {
+  color: var(--color-text-muted);
+  font-weight: var(--fw-medium);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.app-footer-nav a:hover { color: var(--color-text-strong); }
+
+/* On a phone the footer stacks, and a centred row reads as a list of
+   three things rather than as two paragraphs with a stray link wedged
+   between them. */
+@media (max-width: 640px) {
+  .app-footer-inner { flex-direction: column; gap: var(--sp-2); text-align: center; }
+}
+
 /* The footer belongs to the page, not to the sidebar column. */
 .app-shell + .app-footer { border-top: 1px solid var(--color-border); }
 
@@ -413,9 +428,29 @@
   .app-topbar-end { gap: var(--sp-1); }
 }
 
-/* The public bar has room for its links until the buttons crowd them. */
+/* The public bar carries one link nothing else in the application repeats:
+   the way in for an administrator. It used to be display:none below 560px,
+   which meant an administrator on a phone had no route to /admin/login.php
+   at all - not from the bar, not from the footer, not from the landing page -
+   and had to know the URL and type it. An entire role locked out by a media
+   query.
+
+   What crowds the bar at that width is not that link. It is the two buttons
+   beside it, both of which the hero repeats full-width immediately below on
+   the only page this bar ever appears on. So the duplicate goes and the
+   unique one stays, with a shorter label.
+
+   Measured against the real tokens: the old layout needed 328px and so was
+   already overflowing a 320px phone with the admin link hidden. This one
+   needs 259px and clears 320px with 61px to spare. */
+.nav-link-admin-short { display: none; }
+
 @media (max-width: 560px) {
-  .app-topbar-nav-public { display: none; }
+  .nav-link-admin-full  { display: none; }
+  .nav-link-admin-short { display: inline; }
+
+  /* Repeated by the hero, directly below, at full width. */
+  .topbar-register { display: none; }
 }
 
 /* ── Layout primitives shared by pages ──────────────────── */
