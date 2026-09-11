@@ -14,8 +14,10 @@ use App\Core\Theme;
 <html lang="en"<?= Theme::attribute() ?>>
 <head>
   <?php \App\Core\View::partial('partials/head', [
-      'pageTitle'      => $pageTitle,
-      'includeExamCSS' => $includeExamCSS ?? false,
+      'pageTitle'       => $pageTitle,
+      'role'            => $role,
+      'metaDescription' => $metaDescription ?? null,
+      'includeExamCSS'  => $includeExamCSS ?? false,
   ]); ?>
 </head>
 <body>

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Core\Config;
+use App\Core\Request;
 use App\Repositories\LoginAttemptRepository;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -123,12 +124,14 @@ final class LoginThrottle
     /**
      * The client address, packed for the VARBINARY(16) column.
      *
-     * REMOTE_ADDR only - never a forwarded header, which a client can set to
-     * anything and so could use to give itself a fresh counter per request.
+     * Request::clientIp() decides which address that is. It reads
+     * X-Forwarded-For only where the deployment has declared it sits behind
+     * a proxy, so a directly exposed server still cannot be told by a client
+     * what address to count it under.
      */
     public static function clientIp(): string
     {
-        $address = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
+        $address = Request::clientIp();
         $packed  = $address === '' ? false : @inet_pton($address);
 
         return $packed === false ? str_repeat("\0", 4) : $packed;

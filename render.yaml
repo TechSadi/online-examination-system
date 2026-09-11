@@ -1,0 +1,168 @@
+# ============================================================
+#  ExamHub - Render Blueprint
+#
+#  Creates the service from this file rather than from settings
+#  typed into a dashboard, so the deployment is reviewable in a
+#  pull request and reproducible from an empty account.
+#
+#  Apply it: Render Dashboard -> New -> Blueprint -> pick this
+#  repository. Render reads this file and prompts for the five
+#  database values marked `sync: false`, which are the ones
+#  that must never be written down here.
+#
+#  ── About the database ──────────────────────────────────────
+#  Render's managed databases are PostgreSQL and Key Value.
+#  There is no managed MySQL, and this application is MySQL
+#  throughout - schema, migrations and every repository.
+#  Rewriting all of that to reach a database Render happens to
+#  host would be a far larger change, with a far larger blast
+#  radius, than pointing DB_* at a managed MySQL elsewhere.
+#
+#  So the database is external and the application knows nothing
+#  about which provider it is: Aiven, TiDB Cloud, Clever Cloud
+#  and PlanetScale all work, and moving between them is a change
+#  of these variables and nothing else. README.md has the
+#  set-up steps.
+#
+#  A blueprint cannot create that database, so it is the one
+#  part of this deployment that is done by hand - once, before
+#  the first deploy.
+# ============================================================
+
+services:
+  - name: examhub
+    type: web
+    # PHP has no native runtime on Render; PHP services deploy
+    # as containers. The image is defined by ./Dockerfile.
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    region: oregon
+    plan: free
+
+    # Polled to decide whether an instance should take traffic
+    # and whether a deploy succeeded. It returns 200 only when
+    # the database also answers, so a container that starts but
+    # cannot reach its database never replaces a working one.
+    healthCheckPath: /healthz.php
+
+    envVars:
+      # ── Application ──────────────────────────────────────
+      - key: APP_ENV
+        value: production
+
+      # Switches off the debug page. Config::isDebug() also
+      # refuses to be true while APP_ENV is production, so a
+      # stack trace cannot reach a visitor even if this is
+      # flipped by mistake.
+      - key: APP_DEBUG
+        value: "false"
+
+      - key: APP_NAME
+        value: ExamHub
+
+      # Left empty on purpose. Every link and asset URL is then
+      # generated root-relative, which is correct on the
+      # onrender.com hostname and stays correct on a custom
+      # domain without a redeploy. Set it to an absolute URL
+      # only if you need absolute links in generated output.
+      - key: APP_URL
+        value: ""
+
+      # Render terminates TLS at its load balancer and forwards
+      # the real scheme in X-Forwarded-Proto. This is what lets
+      # the application see the request as HTTPS - which turns
+      # on the Secure cookie flag and HSTS - and what lets the
+      # login throttle count the real client address instead of
+      # counting every user in the world as the balancer.
+      #
+      # Correct here precisely because Render does set and
+      # sanitise that header. Never set it on a server exposed
+      # directly to the internet.
+      - key: APP_TRUST_PROXY
+        value: "true"
+
+      # A container's filesystem is discarded on every deploy,
+      # so the log goes to stderr, which Render collects.
+      - key: LOG_CHANNEL
+        value: stderr
+
+      # ── Session ──────────────────────────────────────────
+      - key: SESSION_NAME
+        value: examhub_session
+
+      # Belt and braces: the Secure flag is already set once
+      # APP_TRUST_PROXY lets the request be seen as HTTPS.
+      - key: SESSION_SECURE
+        value: "true"
+
+      # 30 minutes idle, 8 hours absolute. Long enough to sit
+      # a three-hour paper without being signed out mid-exam.
+      - key: SESSION_IDLE_TIMEOUT
+        value: "1800"
+      - key: SESSION_ABSOLUTE_TIMEOUT
+        value: "28800"
+
+      # ── Database ─────────────────────────────────────────
+      # sync: false means Render asks for the value when the
+      # blueprint is first applied and stores it encrypted. It
+      # is never committed, and it is not shown again.
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+
+      - key: DB_CHARSET
+        value: utf8mb4
+
+      # A managed database is reached over the public internet,
+      # so the connection is encrypted. Providers that publish
+      # a CA bundle should also have it uploaded as a Render
+      # Secret File and DB_SSL_CA pointed at it - see README -
+      # which upgrades this from "encrypted" to "encrypted and
+      # verified".
+      - key: DB_SSL
+        value: "true"
+      - key: DB_SSL_CA
+        value: ""
+
+      - key: DB_TIMEOUT
+        value: "10"
+
+      # Apply pending migrations when the container starts.
+      # Safe here: one instance, and every migration is written
+      # to be re-runnable, so a restart is a no-op. A failure
+      # stops the container before Apache, so the health check
+      # never passes and Render keeps the previous one serving
+      # rather than replacing it with a half-migrated schema.
+      #
+      # Set it to "false" if you would rather run
+      # `php bin/migrate.php` yourself against the same DB_*
+      # values - the managed database is reachable from your own
+      # machine, so that needs no shell on the container.
+      - key: RUN_MIGRATIONS
+        value: "true"
+
+      # ── Account security ─────────────────────────────────
+      - key: BCRYPT_COST
+        value: "12"
+      - key: PASSWORD_MIN_LENGTH
+        value: "8"
+      - key: LOGIN_MAX_ATTEMPTS
+        value: "5"
+      - key: LOGIN_DECAY
+        value: "900"
+
+      # ── Exam rules ───────────────────────────────────────
+      - key: EXAM_PASS_MARK
+        value: "60"
+      - key: EXAM_MAX_DURATION
+        value: "300"
+      - key: EXAM_SUBMIT_GRACE
+        value: "60"

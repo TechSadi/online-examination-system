@@ -20,7 +20,6 @@
 }
 
 .container-narrow { max-width: var(--container-narrow); }
-.container-wide   { max-width: var(--container-wide); }
 
 /* ── Top bar ────────────────────────────────────────────── */
 .app-topbar {
@@ -220,9 +219,6 @@
 }
 .sidebar-link[aria-current="page"] .icon { color: var(--color-primary); }
 
-.sidebar-link-danger:hover { background: var(--color-danger-soft); color: var(--color-danger-text); }
-.sidebar-link-danger:hover .icon { color: var(--color-danger); }
-
 /* ── Main column ────────────────────────────────────────── */
 .app-main { flex: 1; min-width: 0; }
 
@@ -396,13 +392,6 @@
 }
 
 /* ── Layout primitives shared by pages ──────────────────── */
-.grid-2 {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: var(--sp-5);
-  align-items: start;
-}
-
 /* An asymmetric two-column split: a form beside its results. */
 .grid-split {
   display: grid;

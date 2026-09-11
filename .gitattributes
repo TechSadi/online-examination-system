@@ -1,0 +1,31 @@
+# ============================================================
+#  Line endings
+#
+#  Everything the Linux container consumes is stored with LF,
+#  whatever the checkout it was committed from.
+#
+#  This is not tidiness. docker/entrypoint.sh begins with a
+#  shebang, and a shebang line ending in CRLF makes the kernel
+#  look for an interpreter called "/bin/sh\r", which does not
+#  exist - the container then dies on start with "bad
+#  interpreter" and the deploy fails with nothing in the logs
+#  that points at the real cause. The Dockerfile has the same
+#  problem in a different form: a trailing backslash followed by
+#  CRLF stops continuing the line.
+#
+#  Relying on a contributor's core.autocrlf setting is what
+#  makes this a silent trap - it is unset here, so a Windows
+#  checkout commits exactly the CRLF it has on disk. Declaring
+#  it in the repository takes the question away from the
+#  machine that happens to be committing.
+#
+#  Deliberately scoped: PHP, CSS and JS are read by parsers that
+#  do not care, so they are left as they are rather than
+#  renormalised into a diff touching every file in the project.
+# ============================================================
+
+*.sh            text eol=lf
+Dockerfile      text eol=lf
+.dockerignore   text eol=lf
+docker/*        text eol=lf
+render.yaml     text eol=lf

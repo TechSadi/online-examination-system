@@ -28,11 +28,19 @@ return [
         'user'     => (string) Env::get('DB_USER', 'root'),
         'password' => (string) Env::get('DB_PASSWORD', ''),
         'charset'  => (string) Env::get('DB_CHARSET', 'utf8mb4'),
+        // Seconds to wait for a connection before giving up. A managed
+        // database is a network hop away, unlike a local socket.
+        'timeout'  => (int) Env::get('DB_TIMEOUT', 10),
+        // Encrypt the connection. Required by every managed MySQL provider
+        // and unnecessary for a local server on the same machine.
+        'ssl'      => (bool) Env::get('DB_SSL', false),
+        // Path to the provider's CA certificate. When set, the server's
+        // certificate is verified against it; DB_SSL is then implied.
+        'ssl_ca'   => (string) Env::get('DB_SSL_CA', ''),
     ],
 
     'session' => [
         'name'   => (string) Env::get('SESSION_NAME', 'examhub_session'),
-        'secret' => (string) Env::get('SESSION_SECRET', ''),
         'secure' => (bool) Env::get('SESSION_SECURE', false),
         // Sign out after this long without a request.
         'idle_timeout'     => (int) Env::get('SESSION_IDLE_TIMEOUT', 1800),
@@ -59,6 +67,13 @@ return [
         // flight as time runs out; without this a slow connection would cost
         // a student their paper. Beyond it, the attempt is recorded expired.
         'submit_grace' => (int) Env::get('EXAM_SUBMIT_GRACE', 60),
+    ],
+
+    'log' => [
+        // "file" writes to storage/logs/app.log. "stderr" writes to the
+        // process's error stream, which is what a container platform
+        // collects - a container's own filesystem does not survive a deploy.
+        'channel' => Env::get('LOG_CHANNEL', 'file') === 'stderr' ? 'stderr' : 'file',
     ],
 
     'paths' => [

@@ -113,7 +113,7 @@ final class Csrf
             'CSRF rejection: %s %s from %s',
             Request::method(),
             Url::current(),
-            $_SERVER['REMOTE_ADDR'] ?? 'unknown'
+            Request::clientIp() ?: 'unknown'
         ));
 
         // A rejected POST must not be replayed by a refresh, so respond with

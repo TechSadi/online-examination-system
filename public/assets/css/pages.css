@@ -13,6 +13,7 @@
      4  Exam catalogue
      5  Result
      6  Question manager
+     7  Error pages
    ============================================================ */
 
 /* ── 1. Landing page ────────────────────────────────────── */
@@ -574,3 +575,72 @@
    and 3:1 is enough for it. */
 .option-chip.is-correct .option-chip-letter { color: var(--color-success-text); }
 .option-chip.is-correct .icon { margin-left: auto; color: var(--color-success); }
+
+/* ── 7. Error pages ─────────────────────────────────────── */
+/* A 404 is still a page of this product, so it is composed
+   rather than dumped: the mark above it says where you are,
+   and the one action out is a real button rather than a
+   "click here" link. It is centred in the viewport because
+   there is nothing else on the page to align it to.
+
+   ErrorPage renders a self-contained copy of this with its CSS
+   inline when the stylesheet itself may not be reachable, so
+   the two are intentionally close in proportion. */
+.error-body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--color-surface-sunken);
+}
+
+.error-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-6);
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: var(--sp-6);
+}
+
+.error-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: var(--container-form);
+  padding: var(--sp-10) var(--sp-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--r-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+}
+
+.error-status {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--color-text-subtle);
+}
+
+.error-title {
+  margin-top: var(--sp-2);
+  font-size: var(--fs-2xl);
+  line-height: var(--lh-tight);
+  color: var(--color-text-strong);
+}
+
+.error-text {
+  margin-top: var(--sp-3);
+  max-width: 44ch;
+  color: var(--color-text-muted);
+}
+
+.error-actions { margin-top: var(--sp-6); }
+
+@media (max-width: 480px) {
+  .error-card { padding: var(--sp-8) var(--sp-5); }
+  .error-title { font-size: var(--fs-xl); }
+}
