@@ -35,4 +35,8 @@ foreach (['REDIRECT_EXAMHUB_STATUS', 'EXAMHUB_STATUS', 'REDIRECT_STATUS'] as $ke
     }
 }
 
-ErrorPage::send(500);
+// Reached with no status at all, which means somebody requested /error.php
+// directly rather than the server dispatching to it. That URL is not a page,
+// so the honest answer is that it does not exist - and it keeps a handler
+// from being a 500 anyone can produce on demand.
+ErrorPage::send(404);

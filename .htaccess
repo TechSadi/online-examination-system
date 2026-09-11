@@ -10,20 +10,32 @@
 Options -Indexes
 
 # Deny the environment file, dependency-free source tree, SQL and logs.
-<FilesMatch "^\.env">
+#
+# Dotfiles as a class, not just .env: .gitignore, .gitattributes and
+# .dockerignore were all downloadable, and between them they list the shape of
+# the deployment and the files worth asking for next.
+<FilesMatch "^\.">
   Require all denied
 </FilesMatch>
 
-<FilesMatch "\.(sql|log|md)$">
+# Configuration and documentation that is read by a tool, never by a browser.
+# render.yaml was served in full, which hands over the deployment topology and
+# the name of every environment variable the application reads.
+<FilesMatch "\.(sql|log|md|ini|conf|sh|ya?ml|lock|dist)$">
   Require all denied
 </FilesMatch>
+
+# The Dockerfile has no extension to match on.
+<Files "Dockerfile">
+  Require all denied
+</Files>
 
 # The optional leading group matters: without it the pattern needed a
 # directory component before "app", so it matched
 # /online-exam-system/app/... under XAMPP but not /app/... when the project
 # is served from a virtual-host root. Each of those directories also carries
 # its own "Require all denied", so this is the outer of two layers.
-RedirectMatch 404 ^/(.*/)?(app|bin|database|storage)/
+RedirectMatch 404 ^/(.*/)?(app|bin|database|docker|storage)/
 
 # Default document.
 DirectoryIndex index.php
@@ -53,6 +65,16 @@ DirectoryIndex index.php
 
   # Only URLs naming no real file or directory. Everything that
   # exists is served exactly as before.
+  #
+  # The denied paths above are deliberately not routed here.
+  # Apache evaluates "Require" during authorisation, which runs
+  # before mod_rewrite's fixup, so a rewrite could not reach
+  # them anyway - they answer 403. That is a weaker answer than
+  # 404, since it confirms the file exists, but it is the price
+  # of a deny that also holds where mod_rewrite is unavailable,
+  # and confirming that a PHP project has a .gitignore is not
+  # worth giving that up for. The container's ErrorDocument
+  # renders those 403s as the application's own page.
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteRule ^ error.php [E=EXAMHUB_STATUS:404,L]

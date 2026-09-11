@@ -34,6 +34,14 @@ final class Security
             return;
         }
 
+        // PHP adds "X-Powered-By: PHP/8.2.12" unless expose_php is off. The
+        // container's php.ini does turn it off, but a header naming the exact
+        // patch level of the interpreter should not depend on one ini file
+        // being present - a developer's local PHP almost certainly has it on,
+        // and that is the machine most likely to be exposed by accident.
+        // Removed here so it is gone wherever this runs.
+        header_remove('X-Powered-By');
+
         header('Content-Security-Policy: ' . self::policy());
 
         // Never let a browser second-guess a declared Content-Type.
