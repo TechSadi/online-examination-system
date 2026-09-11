@@ -54,8 +54,17 @@ Config::set(require __DIR__ . '/Config/config.php');
 ErrorHandler::register();
 date_default_timezone_set('UTC');
 
-/* ── Session ─────────────────────────────────────────────── */
-Session::start();
+/* ── Session ─────────────────────────────────────────────────
+   Skipped for stateless endpoints, which declare themselves by defining
+   APP_STATELESS before requiring this file. Session::start() writes the
+   creation timestamp that drives the absolute timeout, so PHP flushes a
+   session file on every request that reaches it - including a health probe
+   arriving every few seconds, which would otherwise leave the container
+   accumulating thousands of files for callers that have no identity and
+   never come back.                                                      */
+if (!defined('APP_STATELESS') || !APP_STATELESS) {
+    Session::start();
+}
 
 /* ── Response headers ────────────────────────────────────────
    Sent before any controller runs, so every page carries them - including
@@ -66,8 +75,14 @@ Security::sendHeaders();
    Enforced here rather than per controller. Every entry point in admin/,
    student/ and index.php passes through this file, so a state-changing
    request cannot reach a controller without a valid token and a new form
-   cannot forget to opt in.                                              */
-Csrf::guard();
+   cannot forget to opt in.
+
+   The token lives in the session, so this can only run where there is one.
+   A stateless endpoint holds no session to forge a request against, and
+   changes no state to forge one for.                                    */
+if (!defined('APP_STATELESS') || !APP_STATELESS) {
+    Csrf::guard();
+}
 
 /* ── View helpers (e(), url(), asset(), csrf_field(), ...) ── */
 require __DIR__ . '/Helpers/functions.php';
