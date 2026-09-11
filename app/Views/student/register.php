@@ -59,6 +59,9 @@ $minLength = (int) config('security.password_min_length', 8);
       <p class="auth-alt">
         Already registered?
         <a href="<?= e(url('/student/login.php')) ?>">Sign in</a>
+        <br>
+        Administrator?
+        <a href="<?= e(url('/admin/login.php')) ?>">Sign in to the console</a>.
       </p>
     </div>
   </div>

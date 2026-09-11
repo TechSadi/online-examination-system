@@ -41,6 +41,9 @@
       <p class="auth-alt">
         Don&rsquo;t have an account?
         <a href="<?= e(url('/student/register.php')) ?>">Create one</a>
+        <br>
+        Administrator?
+        <a href="<?= e(url('/admin/login.php')) ?>">Sign in to the console</a>.
       </p>
     </div>
   </div>

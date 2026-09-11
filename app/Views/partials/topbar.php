@@ -77,11 +77,18 @@ $studentLinks = [
           'logoutPath' => '/admin/logout.php',
       ]); ?>
     <?php elseif (!$isAuth): ?>
+      <?php /* The label shortens rather than the link disappearing - see the
+               note in layout.css. This is the front door for administrators
+               and it has to survive every width. */ ?>
       <nav class="app-topbar-nav app-topbar-nav-public" aria-label="Main">
-        <a class="nav-link" href="<?= e(url('/admin/login.php')) ?>">Administrators</a>
+        <a class="nav-link nav-link-admin" href="<?= e(url('/admin/login.php')) ?>">
+          <span class="nav-link-admin-full">Admin sign in</span>
+          <span class="nav-link-admin-short">Admin</span>
+        </a>
       </nav>
       <a class="btn btn-secondary btn-sm" href="<?= e(url('/student/login.php')) ?>">Sign in</a>
-      <a class="btn btn-primary btn-sm" href="<?= e(url('/student/register.php')) ?>">Create account</a>
+      <a class="btn btn-primary btn-sm topbar-register"
+         href="<?= e(url('/student/register.php')) ?>">Create account</a>
     <?php endif; ?>
   </div>
 </header>
