@@ -38,8 +38,9 @@ $studentLinks = [
 <header class="app-topbar">
   <?php if ($isAdmin): ?>
     <button type="button" class="nav-toggle" data-drawer-toggle
-            aria-controls="admin-nav" aria-expanded="false" aria-label="Open navigation menu">
+            aria-controls="admin-nav" aria-expanded="false">
       <?= icon('menu') ?>
+      <span class="nav-toggle-label">Menu</span>
     </button>
   <?php endif; ?>
 

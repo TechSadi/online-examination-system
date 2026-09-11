@@ -306,21 +306,48 @@
   /* Off-canvas: no column to paint. */
   .app-shell { grid-template-columns: minmax(0, 1fr); background: none; }
 
+  /* This is the only way into the administration screens on a phone, so it
+     has to look like a control.
+
+     It used to be a borderless, fill-less 38px icon sitting immediately
+     left of the brand mark - and below 640px the brand *text* is hidden
+     too, so the corner became two bare icons side by side. It read as a
+     logo lockup rather than a button, and the entire admin navigation was
+     behind the half of it nobody took for a control. It was reported,
+     accurately, as the Administrators tab having disappeared.
+
+     A border, a fill and the word "Menu" fix it. The same reasoning the
+     student bar already follows two rules down: a control you cannot see
+     is a control you do not have. */
   .nav-toggle {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 38px;
+    gap: var(--sp-2);
     height: 38px;
+    padding-inline: var(--sp-3);
     flex: none;
-    margin-left: calc(var(--sp-2) * -1);
-    border: 1px solid transparent;
+    border: 1px solid var(--color-border);
     border-radius: var(--r-md);
-    background: none;
+    background: var(--color-surface-secondary);
     color: var(--color-text);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    line-height: 1;
     cursor: pointer;
   }
-  .nav-toggle:hover { background: var(--color-surface-sunken); border-color: var(--color-border); }
+  .nav-toggle:hover {
+    background: var(--color-surface-sunken);
+    border-color: var(--color-border-strong);
+  }
+
+  /* Open is a state worth showing: it tells you the panel in front of you
+     belongs to this button, and which one to press to get rid of it. */
+  .nav-toggle[aria-expanded="true"] {
+    background: var(--color-primary-soft);
+    border-color: var(--color-primary-soft-border);
+    color: var(--color-primary-text);
+  }
 
   /* The sidebar leaves the grid and becomes an off-canvas panel above the
      scrim. It stays in the document either way, so the links are the same

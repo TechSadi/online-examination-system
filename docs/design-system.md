@@ -304,6 +304,15 @@ Layouts are reconsidered at each, not shrunk:
   The same markup is now the persistent sidebar on a wide screen and an
   off-canvas drawer on a narrow one, with a scrim, a scroll lock, focus moved
   in on open and returned on close, and Escape to dismiss.
+- **The control that opens that drawer is labelled**, because the first
+  version was not and the drawer may as well not have existed. It was a bare
+  38px icon with a transparent border and no fill, sitting next to the brand
+  mark — and below 640px the brand *text* is hidden, so the corner was two
+  unlabelled icons side by side. It read as a logo lockup, not a button, and
+  an administrator reported that the Administrators screen had disappeared on
+  mobile. It now carries a border, a fill and the word "Menu", and shows its
+  open state. Discoverability is not decoration: a control nobody recognises
+  is a feature nobody has.
 - **Tables restack.** Below 768px each row becomes a labelled block, with the
   name promoted to a heading and the actions on their own line. Scrolling a
   seven-column table sideways on a phone is not a design.
