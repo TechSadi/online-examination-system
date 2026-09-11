@@ -38,7 +38,6 @@
 
 .icon-sprite { display: none; }
 .icon-lg { width: 1.5em; height: 1.5em; }
-.icon-xl { width: 2rem; height: 2rem; stroke-width: 1.5; }
 
 /* ── 2. Buttons ─────────────────────────────────────────── */
 .btn {
@@ -218,7 +217,6 @@
   align-items: center;
   gap: var(--sp-2);
 }
-.btn-row-lg { gap: var(--sp-3); }
 
 /* ── 3. Forms ───────────────────────────────────────────── */
 .field { margin-bottom: var(--sp-5); }
@@ -375,7 +373,6 @@ select.field-input {
   border-top: 1px solid var(--color-border-subtle);
 }
 
-.form-actions-plain { border-top: 0; padding-top: 0; margin-top: var(--sp-5); }
 
 /* ── 4. Cards ───────────────────────────────────────────── */
 .card {
@@ -412,7 +409,6 @@ select.field-input {
 }
 
 .card-body { padding: var(--sp-5); }
-.card-body-flush { padding: 0; }
 .card-body-tight { padding: var(--sp-4); }
 
 .card-footer {
@@ -1117,17 +1113,12 @@ select.field-input {
    alternative is a one-off class on many pages. */
 .text-muted   { color: var(--color-text-muted); }
 .text-sm      { font-size: var(--fs-sm); }
-.text-xs      { font-size: var(--fs-xs); }
-.text-center  { text-align: center; }
-.text-right   { text-align: right; }
 .text-success { color: var(--color-success-text); }
 .text-danger  { color: var(--color-danger-text); }
 
 .stack        { display: flex; flex-direction: column; gap: var(--sp-4); }
 .stack-sm     { display: flex; flex-direction: column; gap: var(--sp-2); }
 .stack-lg     { display: flex; flex-direction: column; gap: var(--sp-6); }
-.cluster      { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
-.spread       { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-3); }
 
 .divider { height: 1px; background: var(--color-border-subtle); border: 0; }
 

@@ -308,7 +308,6 @@
   --topbar-h:        60px;
   --sidebar-w:       248px;
   --container:       1200px;
-  --container-wide:  1360px;
   --container-narrow: 720px;
   --container-form:  560px;
   --gutter:          var(--sp-6);
