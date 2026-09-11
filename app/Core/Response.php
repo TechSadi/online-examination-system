@@ -101,10 +101,15 @@ final class Response
         exit;
     }
 
-    /** Send a bare status code and stop. */
+    /**
+     * Stop the request and show the status page for a code.
+     *
+     * A bare status used to be sent here, which renders as the web server's
+     * own default page - unstyled, and on some hosts carrying the server
+     * version. ErrorPage answers with the application's own page instead.
+     */
     public static function abort(int $status): never
     {
-        http_response_code($status);
-        exit;
+        ErrorPage::send($status);
     }
 }

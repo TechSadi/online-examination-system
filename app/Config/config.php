@@ -70,6 +70,13 @@ return [
         'submit_grace' => (int) Env::get('EXAM_SUBMIT_GRACE', 60),
     ],
 
+    'log' => [
+        // "file" writes to storage/logs/app.log. "stderr" writes to the
+        // process's error stream, which is what a container platform
+        // collects - a container's own filesystem does not survive a deploy.
+        'channel' => Env::get('LOG_CHANNEL', 'file') === 'stderr' ? 'stderr' : 'file',
+    ],
+
     'paths' => [
         'root' => dirname(__DIR__, 2),
         'logs' => dirname(__DIR__, 2) . '/storage/logs',

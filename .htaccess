@@ -27,3 +27,33 @@ RedirectMatch 404 ^/(.*/)?(app|database|storage)/
 
 # Default document.
 DirectoryIndex index.php
+
+# ------------------------------------------------------------
+#  Not-found handling
+#
+#  A URL matching no file used to render Apache's own 404: no
+#  styling, and a "Apache/2.4.x Server at ..." signature at the
+#  foot of it. Those requests are routed to error.php instead,
+#  which answers with the application's own page.
+#
+#  A rewrite is used rather than ErrorDocument because
+#  ErrorDocument takes a path from the document root, which
+#  differs between "/online-exam-system/error.php" under XAMPP
+#  and "/error.php" in the container. A rewrite substitution in
+#  .htaccess is relative to this directory, so the same rule is
+#  correct in both. The container's vhost adds ErrorDocument on
+#  top, covering the statuses Apache raises before a rewrite can
+#  run - 403 and 500 among them.
+# ------------------------------------------------------------
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # The handler itself always resolves, so the rule below cannot loop.
+  RewriteRule ^error\.php$ - [L]
+
+  # Only URLs naming no real file or directory. Everything that
+  # exists is served exactly as before.
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^ error.php [E=EXAMHUB_STATUS:404,L]
+</IfModule>

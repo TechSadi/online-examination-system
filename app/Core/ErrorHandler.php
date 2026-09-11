@@ -11,7 +11,13 @@ use Throwable;
  * Centralised error handling.
  *
  * Development : message, file, line and trace rendered in the page.
- * Production  : a generic apology; the detail goes to storage/logs/app.log.
+ * Production  : ErrorPage's apology; the detail goes to the log.
+ *
+ * Where "the log" is depends on LOG_CHANNEL. A file suits a machine you can
+ * open a terminal on. A container has no such terminal and no disk worth
+ * writing to - its filesystem is discarded on every deploy - so in production
+ * the log is stderr, which the platform collects and shows in its own log
+ * stream.
  *
  * Nothing here ever echoes SQL, credentials or configuration to the browser.
  */
@@ -22,6 +28,12 @@ final class ErrorHandler
         ini_set('display_errors', Config::isDebug() ? '1' : '0');
         ini_set('log_errors', '1');
         error_reporting(E_ALL);
+
+        // Send PHP's own diagnostics, and every error_log() call in the
+        // application, to the same place this class writes to.
+        if (self::channel() === 'stderr') {
+            ini_set('error_log', 'php://stderr');
+        }
 
         set_error_handler([self::class, 'handleError']);
         set_exception_handler([self::class, 'handleException']);
@@ -47,7 +59,7 @@ final class ErrorHandler
             header('Content-Type: text/html; charset=UTF-8');
         }
 
-        echo Config::isDebug() ? self::renderDebug($e) : self::renderGeneric();
+        echo Config::isDebug() ? self::renderDebug($e) : ErrorPage::render(500);
         exit(1);
     }
 
@@ -69,16 +81,19 @@ final class ErrorHandler
         ));
     }
 
+    /** Where diagnostics go: "stderr" or "file". */
+    private static function channel(): string
+    {
+        return (string) Config::get('log.channel', 'file') === 'stderr' ? 'stderr' : 'file';
+    }
+
     private static function log(Throwable $e): void
     {
-        $dir = (string) Config::get('paths.logs', sys_get_temp_dir());
-
-        if (!is_dir($dir)) {
-            @mkdir($dir, 0775, true);
-        }
-
         $entry = sprintf(
-            "[%s] %s: %s in %s:%d\n%s\n%s\n",
+            "[%s] %s: %s in %s:%d
+%s
+%s
+",
             date('Y-m-d H:i:s'),
             $e::class,
             $e->getMessage(),
@@ -88,23 +103,19 @@ final class ErrorHandler
             str_repeat('-', 78)
         );
 
-        @file_put_contents($dir . '/app.log', $entry, FILE_APPEND | LOCK_EX);
-    }
+        if (self::channel() === 'stderr') {
+            @file_put_contents('php://stderr', $entry);
 
-    private static function renderGeneric(): string
-    {
-        return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">'
-            . '<meta name="viewport" content="width=device-width,initial-scale=1">'
-            . '<title>Something went wrong</title><style>'
-            . 'body{font-family:system-ui,-apple-system,sans-serif;background:#f4f6fb;color:#1e2640;margin:0;'
-            . 'display:flex;min-height:100vh;align-items:center;justify-content:center;padding:24px}'
-            . '.box{background:#fff;padding:40px;border-radius:10px;max-width:460px;text-align:center;'
-            . 'box-shadow:0 6px 24px rgba(26,60,110,.12)}h1{margin:0 0 12px;font-size:1.35rem}'
-            . 'p{color:#6b7698;line-height:1.6;margin:0 0 20px}a{color:#1a3c6e;font-weight:600;text-decoration:none}'
-            . '</style></head><body><div class="box"><h1>Something went wrong</h1>'
-            . '<p>This page could not be displayed. The problem has been logged and will be looked into.</p>'
-            . '<a href="' . htmlspecialchars(Url::to('/'), ENT_QUOTES, 'UTF-8') . '">&larr; Back to safety</a>'
-            . '</div></body></html>';
+            return;
+        }
+
+        $dir = (string) Config::get('paths.logs', sys_get_temp_dir());
+
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0775, true);
+        }
+
+        @file_put_contents($dir . '/app.log', $entry, FILE_APPEND | LOCK_EX);
     }
 
     private static function renderDebug(Throwable $e): string
