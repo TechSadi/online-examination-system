@@ -5,14 +5,16 @@
 --  the login throttling log.
 --
 --  Safe to run on an existing database: every statement is
---  additive, and existing results are backfilled into attempts
---  so history stays consistent.
+--  additive and re-runnable, and existing results are backfilled
+--  into attempts so history stays consistent. On a database
+--  created from 000_baseline the whole file is a no-op.
 --
---  Apply with:
---    mysql -u root -p online_exam_db < database/migrations/002_phase3_security.sql
+--  No USE statement: the database is chosen by DB_NAME on the
+--  connection, which on a managed host is a name the provider
+--  picked rather than one this file can assume.
+--
+--  Applied by:  php bin/migrate.php
 -- ============================================================
-
-USE online_exam_db;
 
 -- ── 1. Exam attempts ────────────────────────────────────────
 -- The authoritative record of a student sitting an exam.
@@ -43,7 +45,7 @@ CREATE TABLE IF NOT EXISTS exam_attempts (
     FOREIGN KEY (exam_id)    REFERENCES exams(exam_id)       ON DELETE CASCADE,
     UNIQUE KEY uq_attempts_student_exam (student_id, exam_id),
     INDEX idx_attempts_status (status, expires_at)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── 2. Per-question answers ─────────────────────────────────
 -- Stores what the student actually chose and whether it was
@@ -61,7 +63,7 @@ CREATE TABLE IF NOT EXISTS attempt_answers (
     FOREIGN KEY (question_id) REFERENCES questions(question_id)    ON DELETE CASCADE,
     CONSTRAINT chk_attempt_answers_selected
         CHECK (selected IS NULL OR selected BETWEEN 1 AND 4)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── 3. Login throttling log ─────────────────────────────────
 -- One row per failed sign-in. Successful sign-ins clear the
@@ -77,7 +79,7 @@ CREATE TABLE IF NOT EXISTS login_attempts (
     attempted_at DATETIME NOT NULL,
     INDEX idx_login_attempts_identifier (role, identifier, attempted_at),
     INDEX idx_login_attempts_ip (ip_address, attempted_at)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── 4. Tie each result to the attempt that produced it ──────
 -- MySQL has no ADD COLUMN IF NOT EXISTS, so the column and its
