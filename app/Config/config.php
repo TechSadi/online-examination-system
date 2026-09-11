@@ -41,7 +41,6 @@ return [
 
     'session' => [
         'name'   => (string) Env::get('SESSION_NAME', 'examhub_session'),
-        'secret' => (string) Env::get('SESSION_SECRET', ''),
         'secure' => (bool) Env::get('SESSION_SECURE', false),
         // Sign out after this long without a request.
         'idle_timeout'     => (int) Env::get('SESSION_IDLE_TIMEOUT', 1800),

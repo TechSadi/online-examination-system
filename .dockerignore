@@ -1,0 +1,42 @@
+# ============================================================
+#  Kept out of the build context, and so out of every layer of
+#  the published image.
+#
+#  This matters more than a .gitignore does: an image layer can
+#  be pulled and read by anyone with access to the registry, and
+#  a file deleted in a later layer is still present in the
+#  earlier one. Anything secret must never enter the context at
+#  all.
+# ============================================================
+
+# Local environment. Production configuration arrives as
+# environment variables from Render.
+.env
+.env.*
+!.env.example
+
+# Version control and CI.
+.git
+.github
+.gitignore
+.gitattributes
+
+# Local runtime state.
+storage/logs/*.log
+
+# Editor and OS noise.
+.vscode
+.idea
+*.swp
+Thumbs.db
+.DS_Store
+
+# Documentation and agent instructions: not served, not needed
+# at runtime, and every file in the context is a file the build
+# has to send to the daemon.
+CLAUDE.md
+
+# The image builds itself; it does not need to contain the
+# recipe.
+Dockerfile
+.dockerignore
