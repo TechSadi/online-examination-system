@@ -128,4 +128,59 @@ final class Request
     {
         return $_POST;
     }
+
+    /**
+     * The address the request came from.
+     *
+     * REMOTE_ADDR is the truth on a directly exposed server, and a client
+     * cannot forge it. Behind a reverse proxy it is the proxy, which is a
+     * problem rather than a detail: the login throttle counts failures per
+     * address, so every user in the world sharing one proxy address would
+     * share one counter and a handful of failures anywhere would lock out
+     * everybody.
+     *
+     * X-Forwarded-For fixes that, but only where the deployment declares it
+     * sits behind a proxy that sets the header itself. Trusting it otherwise
+     * would be worse than the problem it solves: an attacker could send a
+     * different value on every request and give themselves an unlimited
+     * supply of fresh throttle counters.
+     *
+     * The leftmost entry is the original client. Entries appended by
+     * intermediaries follow it, and anything the client sent itself is
+     * inside the leftmost position, so the value is validated as an address
+     * before it is used and the raw header is never trusted as-is.
+     */
+    public static function clientIp(): string
+    {
+        $remote = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
+
+        if (!(bool) Config::get('app.trust_proxy', false)) {
+            return $remote;
+        }
+
+        $forwarded = (string) ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? '');
+
+        if ($forwarded === '') {
+            return $remote;
+        }
+
+        foreach (explode(',', $forwarded) as $candidate) {
+            $candidate = trim($candidate);
+
+            // Strip the port from "203.0.113.4:51234" and the brackets from
+            // the "[2001:db8::1]:443" form IPv6 uses.
+            if (str_starts_with($candidate, '[')) {
+                $close     = strpos($candidate, ']');
+                $candidate = $close === false ? $candidate : substr($candidate, 1, $close - 1);
+            } elseif (substr_count($candidate, ':') === 1) {
+                $candidate = strstr($candidate, ':', true) ?: $candidate;
+            }
+
+            if (filter_var($candidate, FILTER_VALIDATE_IP) !== false) {
+                return $candidate;
+            }
+        }
+
+        return $remote;
+    }
 }
