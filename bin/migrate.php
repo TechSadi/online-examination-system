@@ -34,6 +34,16 @@ use App\Core\Database;
 
 const LEDGER = 'schema_migrations';
 
+/**
+ * Exit codes.
+ *
+ * Anything non-zero is a failure; these two are told apart so the caller can
+ * decide how bad it is. 75 is EX_TEMPFAIL from sysexits.h - by convention,
+ * "this did not work now, and may well work later".
+ */
+const EXIT_FAILED      = 1;
+const EXIT_UNREACHABLE = 75;
+
 $options = array_slice($argv, 1);
 $status  = in_array('--status', $options, true);
 $seed    = in_array('--seed', $options, true);
@@ -44,11 +54,59 @@ function say(string $line = ''): void
     fwrite(STDOUT, $line . PHP_EOL);
 }
 
-/** Write a line to stderr and stop with a failing exit code. */
-function fail(string $line): never
+/**
+ * Write a line to stderr and stop with a failing exit code.
+ *
+ * The code matters to the container entrypoint, which treats the two kinds of
+ * failure differently: EXIT_UNREACHABLE means nothing was changed and the
+ * schema is whatever it already was, while the default means a migration was
+ * attempted and may have stopped partway.
+ */
+function fail(string $line, int $code = EXIT_FAILED): never
 {
     fwrite(STDERR, $line . PHP_EOL);
-    exit(1);
+    exit($code);
+}
+
+/**
+ * Open the connection, retrying briefly before giving up.
+ *
+ * Not padding: a managed database that has just been powered on, or that is
+ * finishing a failover, refuses connections for a few seconds and then accepts
+ * them. Without the retry a container booting into that window dies, and the
+ * only cure is a human redeploying something that was about to work by itself.
+ * The wait is bounded and short, and a database that is genuinely off still
+ * fails - just after three tries rather than one.
+ */
+function connect(): void
+{
+    $attempts = 3;
+    $pause    = 3;
+
+    for ($attempt = 1; ; $attempt++) {
+        try {
+            Database::connection();
+
+            return;
+        } catch (ConfigurationException $e) {
+            // A value the operator set is wrong. Retrying cannot fix a path
+            // that does not exist, so this one fails immediately.
+            fail('  ' . $e->getMessage());
+        } catch (Throwable) {
+            if ($attempt >= $attempts) {
+                // Deliberately free of credentials: build logs are not always
+                // private, and the driver's message carries the host and user.
+                fail(
+                    '  Cannot reach the database after ' . $attempts . ' attempts. Check the DB_* '
+                    . 'variables, and whether a free-tier database has been powered off for inactivity.',
+                    EXIT_UNREACHABLE
+                );
+            }
+
+            say(sprintf('  no answer (attempt %d of %d), retrying in %ds ...', $attempt, $attempts, $pause));
+            sleep($pause);
+        }
+    }
 }
 
 /**
@@ -195,17 +253,7 @@ say(sprintf(
 ));
 say();
 
-try {
-    Database::connection();
-} catch (ConfigurationException $e) {
-    // Safe to repeat: it names a value the operator set, not one
-    // the driver reported back with a host and a user in it.
-    fail('  ' . $e->getMessage());
-} catch (Throwable) {
-    // The detail is in the logged exception. The message here is deliberately
-    // free of credentials, because build logs are not always private.
-    fail('  Cannot connect to the database. Check the DB_* variables.');
-}
+connect();
 
 ensureLedger();
 

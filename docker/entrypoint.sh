@@ -88,17 +88,44 @@ fi
 # all re-runnable and backwards compatible with the code already
 # serving.
 #
-# It runs before Apache rather than alongside it, so a failed
-# migration fails the start, the health check never passes, and
-# Render keeps the previous container serving instead of
-# replacing it with one whose schema is half applied.
+# It runs before Apache rather than alongside it, so a broken
+# migration is caught before a single request is served.
 #
 # Leave it off and run `php bin/migrate.php` yourself against
 # the same DB_* values - the managed database is reachable from
 # anywhere, so that needs no shell on the container.
+#
+# Two failures, told apart by exit code. A migration that broke
+# partway through leaves a schema nobody can reason about, and
+# that must stop the container. A database that simply did not
+# answer has changed nothing at all - and exiting for it is what
+# turned an idle free-tier database into a crash loop, because
+# every cold start re-ran this and every one of them died.
+#
+# So an unreachable database now starts Apache anyway. The health
+# check still fails, so Render will not route to it or let it
+# replace a working deploy, and the instant the database answers
+# the application serves normally with no redeploy and nobody
+# woken up. A container returning 503 is strictly more useful
+# than no container at all.
 if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
     echo "entrypoint: applying database migrations"
+
+    # set -e would take the exit code away before it can be read.
+    set +e
     php /var/www/html/bin/migrate.php
+    migrate_status=$?
+    set -e
+
+    # 75 is EX_TEMPFAIL: bin/migrate.php could not reach the
+    # database and stopped before touching the schema.
+    if [ "${migrate_status}" -eq 75 ]; then
+        echo "entrypoint: WARNING - database unreachable, so no migrations ran." >&2
+        echo "entrypoint: starting anyway; /healthz.php will report 503 until it answers." >&2
+    elif [ "${migrate_status}" -ne 0 ]; then
+        echo "entrypoint: migrations failed (exit ${migrate_status}); refusing to serve a half-applied schema" >&2
+        exit "${migrate_status}"
+    fi
 fi
 
 echo "entrypoint: serving ExamHub on 0.0.0.0:${PORT}"
