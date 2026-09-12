@@ -137,10 +137,18 @@ services:
 
       # Apply pending migrations when the container starts.
       # Safe here: one instance, and every migration is written
-      # to be re-runnable, so a restart is a no-op. A failure
-      # stops the container before Apache, so the health check
-      # never passes and Render keeps the previous one serving
-      # rather than replacing it with a half-migrated schema.
+      # to be re-runnable, so a restart is a no-op. A migration
+      # that fails stops the container before Apache, so the
+      # health check never passes and Render keeps the previous
+      # one serving rather than replacing it with a half-migrated
+      # schema.
+      #
+      # A database that is merely unreachable is treated
+      # differently: the runner exits 75, the entrypoint starts
+      # Apache anyway, and the instance recovers on its own when
+      # the database comes back. See "Free-tier idle shutdowns"
+      # in README.md - an idle free-tier database that had been
+      # powered off used to turn every cold start into a crash.
       #
       # Set it to "false" if you would rather run
       # `php bin/migrate.php` yourself against the same DB_*
