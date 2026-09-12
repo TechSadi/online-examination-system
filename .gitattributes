@@ -29,3 +29,11 @@ Dockerfile      text eol=lf
 .dockerignore   text eol=lf
 docker/*        text eol=lf
 render.yaml     text eol=lf
+
+# The `run:` blocks in a workflow are shell scripts executed on
+# a Linux runner. A YAML parser is supposed to normalise CRLF
+# away before they get there, and GitHub's does - but that is a
+# guarantee from the parser, not from the file, and this is the
+# one repository rule that exists so nobody has to rely on that
+# kind of promise.
+.github/**      text eol=lf

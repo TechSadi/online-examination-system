@@ -1,0 +1,162 @@
+# ============================================================
+#  ExamHub - database keep-alive
+#
+#  Aiven's free tier powers off a service with "no continuative
+#  activity", and Render's free tier spins the web service down
+#  after about fifteen minutes of no traffic. Stacked, those two
+#  policies feed each other: no visitors means no instance, no
+#  instance means no queries, and no queries eventually means
+#  Aiven powers the database off. The next visitor then wakes a
+#  container that cannot reach its database, and the deploy dies
+#  with "Exited with status 1" until someone powers the database
+#  back on by hand in the Aiven console.
+#
+#  This job breaks that chain at the database end. It connects
+#  straight to MySQL rather than requesting /healthz.php, which
+#  is deliberate: a request through Render would wake the web
+#  service as a side effect and burn the free plan's 750
+#  instance-hours. Going direct keeps the database active and
+#  lets Render go on sleeping, which is the intended behaviour.
+#
+#  Aiven does not publish what counts as activity or how long
+#  the grace period is, so this is a best effort rather than a
+#  guarantee. A real connection running a real query against a
+#  real table is the closest approximation available. The only
+#  hard guarantee is a paid plan that never idles.
+#
+#  Setup: the six repository secrets below, under
+#  Settings -> Secrets and variables -> Actions. DB_SSL_CA holds
+#  the *contents* of the Aiven CA certificate, not a path - the
+#  repository ignores *.pem precisely so no certificate or key
+#  is ever committed.
+# ============================================================
+
+name: Database keep-alive
+
+on:
+  # Four times a day. Far more often than Aiven's grace period
+  # is likely to be, and cheap enough that the margin costs
+  # nothing. GitHub's scheduler is best-effort and runs late
+  # under load, which this interval absorbs without trouble.
+  schedule:
+    - cron: '0 */6 * * *'
+
+  # So the database can be woken by hand from the Actions tab
+  # after a power-off, without waiting for the next slot.
+  workflow_dispatch:
+
+# A late run must never overlap the next scheduled one; two
+# connections at once prove nothing that one does not.
+concurrency:
+  group: database-keepalive
+  cancel-in-progress: false
+
+# The job reads nothing from the repository.
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    name: Query the database
+    runs-on: ubuntu-latest
+
+    # A reachable database answers in seconds. Anything still
+    # running after five minutes is hung, and hanging is a
+    # failure worth being told about.
+    timeout-minutes: 5
+
+    steps:
+      - name: Check the connection secrets are present
+        env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          set -eu
+
+          missing=''
+          [ -n "${DB_HOST:-}" ]     || missing="${missing} DB_HOST"
+          [ -n "${DB_PORT:-}" ]     || missing="${missing} DB_PORT"
+          [ -n "${DB_NAME:-}" ]     || missing="${missing} DB_NAME"
+          [ -n "${DB_USER:-}" ]     || missing="${missing} DB_USER"
+          [ -n "${DB_PASSWORD:-}" ] || missing="${missing} DB_PASSWORD"
+
+          if [ -n "${missing}" ]; then
+            echo "::error::Missing repository secrets:${missing}. Add them under Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+
+          echo "All connection secrets are set."
+
+      - name: Install the MySQL client
+        run: |
+          set -eu
+          # mysql-client, not mariadb-client: MySQL 8 authenticates
+          # with caching_sha2_password, which MariaDB's client does
+          # not implement, and the connection would fail on auth
+          # rather than on anything to do with the database being
+          # awake.
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends mysql-client
+
+      - name: Ping the database
+        env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_SSL_CA: ${{ secrets.DB_SSL_CA }}
+        run: |
+          set -eu
+
+          config="${RUNNER_TEMP}/keepalive.cnf"
+          ca="${RUNNER_TEMP}/db-ca.pem"
+
+          # The credentials go in a file read only by this user,
+          # never on the command line: anything passed as an
+          # argument is visible in the process list to everything
+          # else running on the machine.
+          umask 077
+
+          {
+            echo '[client]'
+            echo "host=${DB_HOST}"
+            echo "port=${DB_PORT}"
+            echo "user=${DB_USER}"
+            echo "password=${DB_PASSWORD}"
+          } > "${config}"
+
+          # TLS is settled the same way app/Core/Database.php
+          # settles it, so this job proves the connection the
+          # application actually makes rather than a weaker one.
+          if [ -n "${DB_SSL_CA:-}" ]; then
+            printf '%s\n' "${DB_SSL_CA}" > "${ca}"
+            echo "ssl-ca=${ca}"        >> "${config}"
+            echo 'ssl-mode=VERIFY_IDENTITY' >> "${config}"
+            echo 'TLS: verified against the supplied CA.'
+          else
+            # Encrypted but unverified. Enough to stop passive
+            # interception, not an active attacker - so it is the
+            # fallback, not the default. Add the DB_SSL_CA secret.
+            echo 'ssl-mode=REQUIRED' >> "${config}"
+            echo '::warning::DB_SSL_CA is not set, so the server certificate is not verified. Add the Aiven CA certificate as a secret.'
+          fi
+
+          # A real query against a real table. SELECT 1 never
+          # leaves the connection handler, and the point is to
+          # look like genuine use of the database.
+          mysql --defaults-extra-file="${config}" \
+                --connect-timeout=30 \
+                --batch --skip-column-names \
+                "${DB_NAME}" \
+                -e 'SELECT CONCAT("awake at ", NOW(), " UTC, ", COUNT(*), " migrations applied") FROM schema_migrations;'
+
+          rm -f "${config}" "${ca}"
+
+      - name: Report
+        if: failure()
+        run: |
+          echo "::error::The database did not answer. If it is an Aiven free-tier service it may have been powered off - check https://console.aiven.io and power it back on."
