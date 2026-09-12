@@ -580,15 +580,70 @@ stream, alongside Apache's access and error logs. What a visitor sees is
 `/healthz.php` is polled by Render and returns 503 when the database does not answer, so
 a failing deploy is rejected rather than promoted.
 
-There is **no alerting, no error aggregation and no uptime monitoring**. Render will
-email about failed deploys; nothing watches for a rise in 500s. An external uptime check
-against `/healthz.php` is the cheapest way to close that gap and is not set up here.
+There is **no error aggregation and no uptime monitoring**. Render will email about
+failed deploys, and the keep-alive workflow below emails if the database stops answering;
+nothing watches for a rise in 500s. An external uptime check against `/healthz.php` is
+the cheapest way to close that gap and is not set up here.
+
+### Free-tier idle shutdowns
+
+Both free tiers in this deployment switch themselves off when unused, and left alone they
+feed each other:
+
+```
+Render spins the web service down after ~15 min idle
+        v  no instance running
+   no requests reach the application -> no queries reach MySQL
+        v
+Aiven powers off a free service with "no continuative activity"
+        v
+   the next visitor wakes a container whose database is gone
+```
+
+Before this was addressed that last step killed the container: `bin/migrate.php` runs at
+boot, could not connect, and exited non-zero, which Render reported as **"Exited with
+status 1"**. The database had to be powered back on by hand in the Aiven console.
+
+Two things prevent it now.
+
+**`.github/workflows/database-keepalive.yml`** connects to MySQL every six hours and runs
+a real query. It talks to the database *directly* rather than requesting `/healthz.php`,
+which is the point: a request through Render would also wake the web service and spend
+the free plan's 750 instance-hours, whereas going direct keeps the database active and
+lets Render carry on sleeping. It can also be run on demand from the Actions tab to wake
+a database that has already been powered off.
+
+It needs six repository secrets under **Settings -> Secrets and variables -> Actions**:
+
+| Secret | Value |
+|---|---|
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | The same values Render holds |
+| `DB_SSL_CA` | The *contents* of the provider's CA certificate, pasted in — not a path |
+
+`DB_SSL_CA` is optional; without it the connection is encrypted but the certificate is
+unverified, and the run logs a warning. With it, TLS is verified exactly as
+`app/Core/Database.php` verifies it. Nothing is committed either way — `.gitignore`
+excludes `*.pem` deliberately.
+
+**An unreachable database no longer stops the container.** `bin/migrate.php` retries three
+times, then exits `75` (`EX_TEMPFAIL`) to say it could not connect and changed nothing.
+`docker/entrypoint.sh` treats that as non-fatal and starts Apache anyway: `/healthz.php`
+reports 503, Render will not route to the instance or let it replace a working deploy, and
+the moment the database answers the application serves normally with no redeploy. A
+migration that genuinely fails still exits non-zero and still stops the boot, because a
+half-applied schema is a different and much worse problem.
+
+Caveats worth knowing: Aiven does not publish what counts as activity or how long the
+grace period is, so this is best effort — only a paid plan never idles. GitHub's scheduler
+is best-effort too, and it disables scheduled workflows in a public repository after 60
+days without commits.
 
 ### Failure recovery
 
 | Failure | What happens | What to do |
 |---|---|---|
-| Database unreachable | Pages return the styled 500; `/healthz.php` returns 503; the trace is in the log | Check the provider's status and the `DB_*` values |
+| Database unreachable | Pages return the styled 500; `/healthz.php` returns 503; the trace is in the log. The container still starts and recovers by itself once the database answers | Check the provider's status and the `DB_*` values |
+| Free-tier database powered off for inactivity | As above, plus the boot log carries `entrypoint: WARNING - database unreachable` | Power it back on at the provider, then run the **Database keep-alive** workflow from the Actions tab to confirm |
 | Bad deploy | Health check fails, Render keeps the previous container | Fix forward, or roll back from the Render dashboard |
 | Migration fails | The container exits before Apache; the previous one keeps serving | Read the log — the runner names the file and the statement |
 | Locked out of the admin account | — | Re-run `bin/create-admin.php` against the production database to reset the password |
